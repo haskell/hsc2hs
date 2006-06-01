@@ -1,4 +1,4 @@
-{-# OPTIONS -fffi -cpp #-}
+{-# OPTIONS -cpp #-}
 
 ------------------------------------------------------------------------
 -- Program for converting .hsc files to .hs files, by converting the
@@ -9,31 +9,18 @@
 --
 -- See the documentation in the Users' Guide for more details.
 
-#if defined(__GLASGOW_HASKELL__) && !defined(BUILD_NHC)
-#include "../../includes/ghcconfig.h"
-#endif
+import Paths_hsc2hs		( getDataFileName )
 
-#if __GLASGOW_HASKELL__ >= 504 || __NHC__ >= 114 || __HUGS__
+import Control.Monad		( MonadPlus(..), liftM, liftM2, when )
+import Data.Char		( isAlpha, isAlphaNum, isSpace, isDigit,
+				  toUpper, intToDigit, ord )
+import Data.List		( intersperse, isSuffixOf )
+import System.Cmd		( system, rawSystem )
 import System.Console.GetOpt
-#else
-import GetOpt
-#endif
-
-import System        (getProgName, getArgs, ExitCode(..), exitWith)
-import Directory     (removeFile,doesFileExist)
-import Monad         (MonadPlus(..), liftM, liftM2, when)
-import Char          (isAlpha, isAlphaNum, isSpace, isDigit, toUpper, intToDigit, ord)
-import List          (intersperse, isSuffixOf)
-import IO            (hPutStr, hPutStrLn, stderr)
-
-#if defined(mingw32_HOST_OS) && !__HUGS__
-import Foreign
-#if __GLASGOW_HASKELL__ >= 504 || __NHC__ >= 114
-import Foreign.C.String
-#else
-import CString
-#endif
-#endif
+import System.Directory		( removeFile, doesFileExist, findExecutable )
+import System.Environment	( getProgName, getArgs )
+import System.Exit		( ExitCode(..), exitWith )
+import System.IO		( hPutStr, hPutStrLn, stderr )
 
 #if __GLASGOW_HASKELL__ >= 604
 import System.Process           ( runProcess, waitForProcess )
@@ -41,21 +28,10 @@ import System.IO                ( openFile, IOMode(..), hClose )
 #define HAVE_runProcess
 #endif
 
-#if defined(__GLASGOW_HASKELL__) && !defined(BUILD_NHC)
-import Compat.RawSystem 	( rawSystem )
-#define HAVE_rawSystem
-#elif __HUGS__ || __NHC__ >= 117
-import System.Cmd	 	( rawSystem )
-#define HAVE_rawSystem
-#endif
-
-#if !defined(HAVE_runProcess) || !defined(HAVE_rawSystem)
--- we need system
-#if __HUGS__ || __NHC__ >= 117 || __GLASGOW_HASKELL__ >= 600
-import System.Cmd	 	( system )
+#ifdef __GLASGOW_HASKELL__
+default_compiler = "ghc"
 #else
-import System                   ( system )
-#endif
+default_compiler = "gcc"
 #endif
 
 version :: String
@@ -125,28 +101,14 @@ main = do
     args <- getArgs
     let (flags, files, errs) = getOpt Permute options args
 
-	-- If there is no Template flag explicitly specified, try
-	-- to find one by looking near the executable.  This only
-	-- works on Win32 or Hugs (getExecDir). On Unix, there's a wrapper
-	-- script which specifies an explicit template flag.
-    flags_w_tpl <- if any template_flag flags then
-			return flags
-		   else
-#ifdef __HUGS__
-			do mb_path <- getExecDir "/Main.hs"
-#else
-			do mb_path <- getExecDir "/bin/hsc2hs.exe"
-#endif
-			   add_opt <-
-			    case mb_path of
-			      Nothing   -> return id
-			      Just path -> do
-				let templ = path ++ "/template-hsc.h"
-				flg <- doesFileExist templ
-				if flg
-				 then return ((Template templ):)
-				 else return id
-		           return (add_opt flags)
+	-- If there is no Template flag explicitly specified,
+	-- use the file placed by the Cabal installation.
+    flags_w_tpl <-
+	if any template_flag flags then
+	    return flags
+	  else do
+	    templ <- getDataFileName "template-hsc.h"
+	    return (Template templ : flags)
     case (files, errs) of
         (_, _)
             | any isHelp    flags_w_tpl -> bye (usageInfo header options)
@@ -548,9 +510,12 @@ output flags name toks = do
             fixChar c | isAlphaNum c = toUpper c
                       | otherwise    = '_'
 
-#ifdef __HUGS__
     compiler <- case [c | Compiler c <- flags] of
-        []  -> return "gcc"
+        []  -> do
+	    mb_path <- findExecutable default_compiler
+	    case mb_path of
+		Nothing -> die ("Can't find "++default_compiler++"\n")
+		Just path -> return path
         [c] -> return c
         _   -> onlyOne "compiler"
 
@@ -558,40 +523,6 @@ output flags name toks = do
         []  -> return compiler
         [l] -> return l
         _   -> onlyOne "linker"
-#else
-        -- Try locating GHC..on Win32, look in the vicinity of hsc2hs.
-	-- Returns a native-format path
-        locateGhc def = do
-	    mb <- getExecDir "bin/hsc2hs.exe"
-	    case mb of
-	      Nothing -> return def
-	      Just x  -> do
-	         let ghc_path = dosifyPath (x ++ "bin/ghc.exe")
-	         flg <- doesFileExist ghc_path
-		 if flg
-		  then return ghc_path
-		  else return def
-
-	-- On a Win32 installation we execute the hsc2hs binary directly,
-	-- with no --cc flags, so we'll call locateGhc here, which will
-	-- succeed, via getExecDir.
-	--
-	-- On a Unix installation, we'll run the wrapper script hsc2hs.sh
-	-- (called plain hsc2hs in the installed tree), which will pass
-	-- a suitable C compiler via --cc
-	--
-	-- The in-place installation always uses the wrapper script,
-	-- (called hsc2hs-inplace, generated from hsc2hs.sh)
-    compiler <- case [c | Compiler c <- flags] of
-        []  -> locateGhc "ghc"
-        [c] -> return c
-        _   -> onlyOne "compiler"
-
-    linker <- case [l | Linker l <- flags] of
-        []  -> locateGhc compiler
-        [l] -> return l
-        _   -> onlyOne "linker"
-#endif
 
     writeFile cProgName $
         concatMap outFlagHeaderCProg flags++
@@ -661,11 +592,7 @@ rawSystemL :: Bool -> FilePath -> [String] -> IO ExitCode
 rawSystemL flg prog args = do
   let cmdLine = prog++" "++unwords args
   when flg $ hPutStrLn stderr ("Executing: " ++ cmdLine)
-#ifndef HAVE_rawSystem
-  system cmdLine
-#else
   rawSystem prog args
-#endif
 
 rawSystemWithStdOutL :: Bool -> FilePath -> [String] -> FilePath -> IO ExitCode
 rawSystemWithStdOutL flg prog args outFile = do
@@ -902,31 +829,3 @@ subst _ _ = id
 
 dosifyPath :: String -> String
 dosifyPath = subst '/' '\\'
-
--- (getExecDir cmd) returns the directory in which the current
---	  	    executable, which should be called 'cmd', is running
--- So if the full path is /a/b/c/d/e, and you pass "d/e" as cmd,
--- you'll get "/a/b/c" back as the result
-getExecDir :: String -> IO (Maybe String)
-getExecDir cmd =
-    getExecPath >>= maybe (return Nothing) removeCmdSuffix
-    where unDosifyPath = subst '\\' '/'
-          initN n = reverse . drop n . reverse
-          removeCmdSuffix = return . Just . initN (length cmd) . unDosifyPath
-
-getExecPath :: IO (Maybe String)
-#if defined(__HUGS__)
-getExecPath = liftM Just getProgName
-#elif defined(mingw32_HOST_OS)
-getExecPath =
-     allocaArray len $ \buf -> do
-         ret <- getModuleFileName nullPtr buf len
-         if ret == 0 then return Nothing
-	             else liftM Just $ peekCString buf
-    where len = 2048 -- Plenty, PATH_MAX is 512 under Win32.
-
-foreign import stdcall unsafe "GetModuleFileNameA"
-    getModuleFileName :: Ptr () -> CString -> Int -> IO Int32
-#else
-getExecPath = return Nothing
-#endif
