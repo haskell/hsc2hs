@@ -16,9 +16,8 @@ Description:
 	provide Haskell counterparts of C types, values of C constants,
 	including sizes of C types, and access to fields of C structs.
 	.
-	Actually hsc2hs does not output the Haskell file directly.  It
-	creates a C program that includes the headers, gets automatically
-	compiled and run.  That program outputs the Haskell code.
+	For more details, see
+	http://www.haskell.org/ghc/docs/latest/html/users_guide/hsc2hs.html
 Category: Development
 Data-Files: template-hsc.h
 
