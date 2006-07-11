@@ -9,15 +9,14 @@
 --
 -- See the documentation in the Users' Guide for more details.
 
-import Paths_hsc2hs		( getDataFileName )
-
 import Control.Monad		( MonadPlus(..), liftM, liftM2, when )
 import Data.Char		( isAlpha, isAlphaNum, isSpace, isDigit,
 				  toUpper, intToDigit, ord )
 import Data.List		( intersperse, isSuffixOf )
 import System.Cmd		( system, rawSystem )
 import System.Console.GetOpt
-import System.Directory		( removeFile, doesFileExist, findExecutable )
+import System.Directory		( removeFile, doesFileExist, findExecutable
+                                , getCurrentDirectory )
 import System.Environment	( getProgName, getArgs )
 import System.Exit		( ExitCode(..), exitWith )
 import System.IO		( hPutStr, hPutStrLn, stderr )
@@ -26,6 +25,13 @@ import System.IO		( hPutStr, hPutStrLn, stderr )
 import System.Process           ( runProcess, waitForProcess )
 import System.IO                ( openFile, IOMode(..), hClose )
 #define HAVE_runProcess
+#endif
+
+#if ! BUILD_NHC
+import Paths_hsc2hs		( getDataFileName )
+#else
+getDataFileName s = do here <- getCurrentDirectory
+                       return (here++"/"++s)
 #endif
 
 #ifdef __GLASGOW_HASKELL__
