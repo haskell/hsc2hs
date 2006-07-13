@@ -15,11 +15,18 @@ import Data.Char		( isAlpha, isAlphaNum, isSpace, isDigit,
 import Data.List		( intersperse, isSuffixOf )
 import System.Cmd		( system, rawSystem )
 import System.Console.GetOpt
-import System.Directory		( removeFile, doesFileExist, findExecutable
-                                , getCurrentDirectory )
+import System.Directory		( removeFile, doesFileExist )
 import System.Environment	( getProgName, getArgs )
 import System.Exit		( ExitCode(..), exitWith )
 import System.IO		( hPutStr, hPutStrLn, stderr )
+
+#if __GLASGOW_HASKELL__ >= 604 || defined(__NHC__) || defined(__HUGS__)
+import System.Directory		( findExecutable )
+#else
+import System.Directory		( getPermissions, executable )
+import System.Environment	( getEnv )
+import Control.Monad		( foldM )
+#endif
 
 #if __GLASGOW_HASKELL__ >= 604
 import System.Process           ( runProcess, waitForProcess )
@@ -30,6 +37,7 @@ import System.IO                ( openFile, IOMode(..), hClose )
 #if ! BUILD_NHC
 import Paths_hsc2hs		( getDataFileName )
 #else
+import System.Directory		( getCurrentDirectory )
 getDataFileName s = do here <- getCurrentDirectory
                        return (here++"/"++s)
 #endif
@@ -38,6 +46,40 @@ getDataFileName s = do here <- getCurrentDirectory
 default_compiler = "ghc"
 #else
 default_compiler = "gcc"
+#endif
+
+#if defined(__GLASGOW_HASKELL__) && (__GLASGOW_HASKELL__ < 604)
+findExecutable :: String -> IO (Maybe FilePath)
+findExecutable cmd =
+  let dir = dirname cmd
+  in case dir of
+    "" -> do -- search the shell environment PATH variable for candidates
+             val <- getEnv "PATH"
+             let psep = pathSep val
+                 dirs = splitPath psep "" val
+             foldM (\a dir-> testFile a (dir++'/':cmd)) Nothing dirs
+    _  -> do testFile Nothing cmd
+  where
+    splitPath :: Char -> String -> String -> [String]
+    splitPath sep acc []                 = [reverse acc]
+    splitPath sep acc (c:path) | c==sep  = reverse acc : splitPath sep "" path
+    splitPath sep acc (c:path)           = splitPath sep (c:acc) path
+
+    pathSep s = if length (filter (==';') s) >0 then ';' else ':'
+
+    testFile :: Maybe String -> String -> IO (Maybe String)
+    testFile gotit@(Just _) path = return gotit
+    testFile Nothing path = do
+        ok <- doesFileExist path
+        if ok then perms path else return Nothing
+
+    perms file = do
+        p <- getPermissions file
+        return (if executable p then Just file else Nothing)
+
+    dirname  = reverse . safetail . dropWhile (not.(`elem`"\\/")) . reverse
+      where safetail [] = []
+            safetail (_:x) = x
 #endif
 
 version :: String
