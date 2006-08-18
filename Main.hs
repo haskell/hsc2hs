@@ -586,34 +586,23 @@ output flags name toks = do
     when (any (\x -> case x of NoCompile -> True; _ -> False) flags) $
        exitWith ExitSuccess
 
-    compilerStatus <- rawSystemL beVerbose compiler
+    rawSystemL ("compiling " ++ cProgName) beVerbose compiler
 	(  ["-c"]
         ++ [f | CompFlag f <- flags]
         ++ [cProgName]
         ++ ["-o", oProgName]
 	)
-
-    case compilerStatus of
-        e@(ExitFailure _) -> exitWith e
-        _                 -> return ()
     removeFile cProgName
 
-    linkerStatus <- rawSystemL beVerbose linker
+    rawSystemL ("linking " ++ oProgName) beVerbose linker
         (  [f | LinkFlag f <- flags]
         ++ [oProgName]
         ++ ["-o", progName]
 	)
-
-    case linkerStatus of
-        e@(ExitFailure _) -> exitWith e
-        _                 -> return ()
     removeFile oProgName
 
-    progStatus <- rawSystemWithStdOutL beVerbose execProgName [] outName
+    rawSystemWithStdOutL ("running " ++ execProgName) beVerbose execProgName [] outName
     removeFile progName
-    case progStatus of
-        e@(ExitFailure _) -> exitWith e
-        _                 -> return ()
 
     when needsH $ writeFile outHName $
         "#ifndef "++includeGuard++"\n" ++
@@ -636,25 +625,35 @@ output flags name toks = do
 	-- NB. outHFile not outHName; works better when processed
 	-- by gcc or mkdependC.
 
-rawSystemL :: Bool -> FilePath -> [String] -> IO ExitCode
-rawSystemL flg prog args = do
+rawSystemL :: String -> Bool -> FilePath -> [String] -> IO ()
+rawSystemL action flg prog args = do
   let cmdLine = prog++" "++unwords args
   when flg $ hPutStrLn stderr ("Executing: " ++ cmdLine)
-  rawSystem prog args
+#ifndef HAVE_rawSystem
+  exitStatus <- system cmdLine
+#else
+  exitStatus <- rawSystem prog args
+#endif
+  case exitStatus of
+    ExitFailure _ -> die $ action ++ " failed\ncommand was: " ++ cmdLine ++ "\n"
+    _             -> return ()
 
-rawSystemWithStdOutL :: Bool -> FilePath -> [String] -> FilePath -> IO ExitCode
-rawSystemWithStdOutL flg prog args outFile = do
+rawSystemWithStdOutL :: String -> Bool -> FilePath -> [String] -> FilePath -> IO ExitCode
+rawSystemWithStdOutL action flg prog args outFile = do
   let cmdLine = prog++" "++unwords args++" >"++outFile
   when flg (hPutStrLn stderr ("Executing: " ++ cmdLine))
 #ifndef HAVE_runProcess
-  system cmdLine
+  exitStatus <- system cmdLine
 #else
   hOut <- openFile outFile WriteMode
   process <- runProcess prog args Nothing Nothing Nothing (Just hOut) Nothing
-  res <- waitForProcess process
+  exitStatus <- waitForProcess process
   hClose hOut
   return res
 #endif
+  case exitStatus of
+    ExitFailure _ -> die $ action ++ " failed\ncommand was: " ++ cmdLine ++ "\n"
+    _             -> return ()
 
 onlyOne :: String -> IO a
 onlyOne what = die ("Only one "++what++" may be specified\n")
