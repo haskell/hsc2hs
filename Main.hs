@@ -638,7 +638,7 @@ rawSystemL action flg prog args = do
     ExitFailure _ -> die $ action ++ " failed\ncommand was: " ++ cmdLine ++ "\n"
     _             -> return ()
 
-rawSystemWithStdOutL :: String -> Bool -> FilePath -> [String] -> FilePath -> IO ExitCode
+rawSystemWithStdOutL :: String -> Bool -> FilePath -> [String] -> FilePath -> IO ()
 rawSystemWithStdOutL action flg prog args outFile = do
   let cmdLine = prog++" "++unwords args++" >"++outFile
   when flg (hPutStrLn stderr ("Executing: " ++ cmdLine))
@@ -649,7 +649,6 @@ rawSystemWithStdOutL action flg prog args outFile = do
   process <- runProcess prog args Nothing Nothing Nothing (Just hOut) Nothing
   exitStatus <- waitForProcess process
   hClose hOut
-  return res
 #endif
   case exitStatus of
     ExitFailure _ -> die $ action ++ " failed\ncommand was: " ++ cmdLine ++ "\n"
