@@ -27,7 +27,7 @@ endif
 all: $(TARGET)
 install: $(TARGET)
 cfiles: cleanC $(SRCS)
-	$(HMAKE) -hc=$(LOCAL)nhc98 -package base -C Main.hs
+	$(HMAKE) -hc=$(LOCAL)nhc98 -package base -DBUILD_NHC -C Main.hs
 clean:
 	-rm -f *.hi *.o $(OBJDIR)/*.o
 cleanC: clean
