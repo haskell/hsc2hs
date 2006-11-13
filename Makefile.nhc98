@@ -9,7 +9,11 @@ FROMC  = ../libraries/base/System/Console/GetOpt.$C \
 	 ../libraries/base/System/Cmd.$C \
 	 ../libraries/base/System/Directory.$C \
 	 ../libraries/base/System/Directory/Internals.$C \
-	 ../libraries/base/Control/Monad.$C
+	 ../libraries/base/Control/Monad.$C \
+	 ../libraries/base/Foreign/C/String.$C \
+	 ../libraries/base/Foreign/Marshal/Alloc.$C \
+	 ../libraries/base/Foreign/Marshal/Array.$C \
+	 ../libraries/base/Foreign/Marshal/Utils.$C
 
 ifeq "$(findstring ghc, ${HC})" "ghc"
 HFLAGS = $(shell $(LOCAL)fixghc $(GHCSYM) -package base -package lang )
