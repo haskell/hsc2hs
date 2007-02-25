@@ -35,11 +35,14 @@ import System.IO                ( openFile, IOMode(..), hClose )
 #endif
 
 #if ! BUILD_NHC
-import Paths_hsc2hs		( getDataFileName )
+import Paths_hsc2hs		( getDataFileName, version )
+import Data.Version		( showVersion )
 #else
 import System.Directory		( getCurrentDirectory )
 getDataFileName s = do here <- getCurrentDirectory
                        return (here++"/"++s)
+version = "0.67" -- TODO!!!
+showVersion = id
 #endif
 
 #ifdef __GLASGOW_HASKELL__
@@ -82,8 +85,8 @@ findExecutable cmd =
             safetail (_:x) = x
 #endif
 
-version :: String
-version = "hsc2hs version 0.66\n"
+versionString :: String
+versionString = "hsc2hs version " ++ showVersion version ++ "\n"
 
 data Flag
     = Help
@@ -160,7 +163,7 @@ main = do
     case (files, errs) of
         (_, _)
             | any isHelp    flags_w_tpl -> bye (usageInfo header options)
-            | any isVersion flags_w_tpl -> bye version
+            | any isVersion flags_w_tpl -> bye versionString
             where
             isHelp    Help    = True; isHelp    _ = False
             isVersion Version = True; isVersion _ = False
