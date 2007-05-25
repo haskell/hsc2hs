@@ -6,9 +6,9 @@ TARGET = ${DST}/hsc2hs$(EXE)
 SRCS   = Main.hs
 FROMC  = ../libraries/base/System/Console/GetOpt.$C \
 	 ../libraries/base/Data/List.$C \
-	 ../libraries/base/System/Cmd.$C \
-	 ../libraries/base/System/Directory.$C \
-	 ../libraries/base/System/Directory/Internals.$C \
+	 ../libraries/process/System/Cmd.$C \
+	 ../libraries/directory/System/Directory.$C \
+	 ../libraries/directory/System/Directory/Internals.$C \
 	 ../libraries/base/Control/Monad.$C \
 	 ../libraries/base/Foreign/C/String.$C \
 	 ../libraries/base/Foreign/Marshal/Alloc.$C \
@@ -24,7 +24,7 @@ HFLAGS =
 export HFLAGS
 endif
 ifeq "$(findstring nhc98, ${HC})" "nhc98"
-HFLAGS = -package base +CTS -H4M -CTS
+HFLAGS = -package base -package directory +CTS -H4M -CTS
 export HFLAGS
 endif
 
