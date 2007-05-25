@@ -1,7 +1,7 @@
 Name: hsc2hs
 Version: 0.67
 Copyright: 2000, Marcin Kowalczyk
-Build-Depends: base
+Build-Depends: base, directory, process
 License: BSD3
 License-File: LICENSE
 Author: Marcin Kowalczyk <qrczak@knm.org.pl>
