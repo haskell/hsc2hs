@@ -9,6 +9,7 @@ FROMC  = ../libraries/base/System/Console/GetOpt.$C \
 	 ../libraries/process/System/Cmd.$C \
 	 ../libraries/directory/System/Directory.$C \
 	 ../libraries/base/Control/Monad.$C \
+	 ../libraries/base/Control/Exception.$C \
 	 ../libraries/base/Foreign/C/String.$C \
 	 ../libraries/base/Foreign/Marshal/Alloc.$C \
 	 ../libraries/base/Foreign/Marshal/Array.$C \
