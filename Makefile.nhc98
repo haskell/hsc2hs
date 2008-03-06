@@ -17,7 +17,7 @@ FROMC  = ../libraries/base/System/Console/GetOpt.$C \
 	 ../libraries/filepath/System/FilePath/Posix.$C
 
 ifeq "$(findstring ghc, ${HC})" "ghc"
-HFLAGS = $(shell $(LOCAL)fixghc $(GHCSYM) -package base -package lang )
+HFLAGS = $(shell $(LOCAL)fixghc $(GHCSYM) -package base -package lang -package process -package directory )
 export HFLAGS
 endif
 ifeq "$(findstring hbc, ${HC})" "hbc"
