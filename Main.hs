@@ -9,23 +9,23 @@
 --
 -- See the documentation in the Users' Guide for more details.
 
-import Control.Monad		( MonadPlus(..), liftM, liftM2, when )
-import Data.Char		( isAlpha, isAlphaNum, isSpace, isDigit,
-				  toUpper, intToDigit, ord )
-import Data.List		( intersperse, isSuffixOf )
-import System.Cmd		( system, rawSystem )
+import Control.Monad            ( MonadPlus(..), liftM, liftM2, when )
+import Data.Char                ( isAlpha, isAlphaNum, isSpace, isDigit,
+                                  toUpper, intToDigit, ord )
+import Data.List                ( intersperse, isSuffixOf )
+import System.Cmd               ( system, rawSystem )
 import System.Console.GetOpt
-import System.Directory		( removeFile, doesFileExist )
-import System.Environment	( getProgName, getArgs )
-import System.Exit		( ExitCode(..), exitWith )
-import System.IO		( hPutStr, hPutStrLn, stderr )
+import System.Directory         ( removeFile, doesFileExist )
+import System.Environment       ( getProgName, getArgs )
+import System.Exit              ( ExitCode(..), exitWith )
+import System.IO                ( hPutStr, hPutStrLn, stderr )
 
 #if __GLASGOW_HASKELL__ >= 604 || defined(__NHC__) || defined(__HUGS__)
-import System.Directory		( findExecutable )
+import System.Directory         ( findExecutable )
 #else
-import System.Directory		( getPermissions, executable )
-import System.Environment	( getEnv )
-import Control.Monad		( foldM )
+import System.Directory         ( getPermissions, executable )
+import System.Environment       ( getEnv )
+import Control.Monad            ( foldM )
 #endif
 
 #if __GLASGOW_HASKELL__ >= 604
@@ -35,10 +35,10 @@ import System.IO                ( openFile, IOMode(..), hClose )
 #endif
 
 #if ! BUILD_NHC
-import Paths_hsc2hs		( getDataFileName, version )
-import Data.Version		( showVersion )
+import Paths_hsc2hs             ( getDataFileName, version )
+import Data.Version             ( showVersion )
 #else
-import System.Directory		( getCurrentDirectory )
+import System.Directory         ( getCurrentDirectory )
 getDataFileName s = do here <- getCurrentDirectory
                        return (here++"/"++s)
 version = "0.67" -- TODO!!!
@@ -104,7 +104,7 @@ data Flag
 
 template_flag :: Flag -> Bool
 template_flag (Template _) = True
-template_flag _		   = False
+template_flag _            = False
 
 include :: String -> Flag
 include s@('\"':_) = Include s
@@ -152,14 +152,14 @@ main = do
     args <- getArgs
     let (flags, files, errs) = getOpt Permute options args
 
-	-- If there is no Template flag explicitly specified,
-	-- use the file placed by the Cabal installation.
+        -- If there is no Template flag explicitly specified,
+        -- use the file placed by the Cabal installation.
     flags_w_tpl <-
-	if any template_flag flags then
-	    return flags
-	  else do
-	    templ <- getDataFileName "template-hsc.h"
-	    return (Template templ : flags)
+        if any template_flag flags then
+            return flags
+          else do
+            templ <- getDataFileName "template-hsc.h"
+            return (Template templ : flags)
     case (files, errs) of
         (_, _)
             | any isHelp    flags_w_tpl -> bye (usageInfo header options)
@@ -187,10 +187,10 @@ processFile flags name
   = do let file_name = dosifyPath name
        s <- readFile file_name
        case parser of
-    	   Parser p -> case p (SourcePos file_name 1) s of
-    	       Success _ _ _ toks -> output flags file_name toks
-    	       Failure (SourcePos name' line) msg ->
-    		   die (name'++":"++show line++": "++msg++"\n")
+           Parser p -> case p (SourcePos file_name 1) s of
+               Success _ _ _ toks -> output flags file_name toks
+               Failure (SourcePos name' line) msg ->
+                   die (name'++":"++show line++": "++msg++"\n")
 
 ------------------------------------------------------------------------
 -- A deterministic parser which remembers the text which has been parsed.
@@ -541,11 +541,11 @@ output flags name toks = do
 -- via GHC has changed a few times, so this seems to be the only way...  :-P * * *
                           ++ ".exe"
 #endif
-	outHFile     = outBase++"_hsc.h"
+        outHFile     = outBase++"_hsc.h"
         outHName     = outDir++outHFile
         outCName     = outDir++outBase++"_hsc.c"
 
-	beVerbose    = any (\ x -> case x of { Verbose -> True; _ -> False}) flags
+        beVerbose    = any (\ x -> case x of { Verbose -> True; _ -> False}) flags
 
     let execProgName
             | null outDir = dosifyPath ("./" ++ progName)
@@ -563,10 +563,10 @@ output flags name toks = do
 
     compiler <- case [c | Compiler c <- flags] of
         []  -> do
-	    mb_path <- findExecutable default_compiler
-	    case mb_path of
-		Nothing -> die ("Can't find "++default_compiler++"\n")
-		Just path -> return path
+            mb_path <- findExecutable default_compiler
+            case mb_path of
+                Nothing -> die ("Can't find "++default_compiler++"\n")
+                Just path -> return path
         [c] -> return c
         _   -> onlyOne "compiler"
 
@@ -590,18 +590,18 @@ output flags name toks = do
        exitWith ExitSuccess
 
     rawSystemL ("compiling " ++ cProgName) beVerbose compiler
-	(  ["-c"]
+        (  ["-c"]
         ++ [f | CompFlag f <- flags]
         ++ [cProgName]
         ++ ["-o", oProgName]
-	)
+        )
     removeFile cProgName
 
     rawSystemL ("linking " ++ oProgName) beVerbose linker
         (  [f | LinkFlag f <- flags]
         ++ [oProgName]
         ++ ["-o", progName]
-	)
+        )
     removeFile oProgName
 
     rawSystemWithStdOutL ("running " ++ execProgName) beVerbose execProgName [] outName
@@ -625,8 +625,8 @@ output flags name toks = do
     when needsC $ writeFile outCName $
         "#include \""++outHFile++"\"\n"++
         concatMap outTokenC specials
-	-- NB. outHFile not outHName; works better when processed
-	-- by gcc or mkdependC.
+        -- NB. outHFile not outHName; works better when processed
+        -- by gcc or mkdependC.
 
 rawSystemL :: String -> Bool -> FilePath -> [String] -> IO ()
 rawSystemL action flg prog args = do
@@ -715,21 +715,21 @@ outHeaderHs flags inH toks =
         (name, "")      -> name
         (name, _:value) -> name++'=':dropWhile isSpace value
     outOption s =
-	"#if __GLASGOW_HASKELL__ && __GLASGOW_HASKELL__ < 603\n" ++
-	"    printf (\"{-# OPTIONS %s #-}\\n\", \""++
+        "#if __GLASGOW_HASKELL__ && __GLASGOW_HASKELL__ < 603\n" ++
+        "    printf (\"{-# OPTIONS %s #-}\\n\", \""++
                   showCString s++"\");\n"++
-	"#else\n"++
-	"    printf (\"{-# OPTIONS_GHC %s #-}\\n\", \""++
+        "#else\n"++
+        "    printf (\"{-# OPTIONS_GHC %s #-}\\n\", \""++
                   showCString s++"\");\n"++
-	"#endif\n"
+        "#endif\n"
     outInclude s =
-	"#if __GLASGOW_HASKELL__ && __GLASGOW_HASKELL__ < 603\n" ++
-	"    printf (\"{-# OPTIONS -#include %s #-}\\n\", \""++
+        "#if __GLASGOW_HASKELL__ && __GLASGOW_HASKELL__ < 603\n" ++
+        "    printf (\"{-# OPTIONS -#include %s #-}\\n\", \""++
                   showCString s++"\");\n"++
-	"#else\n"++
-	"    printf (\"{-# INCLUDE %s #-}\\n\", \""++
+        "#else\n"++
+        "    printf (\"{-# INCLUDE %s #-}\\n\", \""++
                   showCString s++"\");\n"++
-	"#endif\n"
+        "#endif\n"
 
 outTokenHs :: Token -> String
 outTokenHs (Text pos txt) =
@@ -805,18 +805,18 @@ outTokenC (pos, key, arg) =
             's':'t':'r':'u':'c':'t':' ':_ -> ""
             't':'y':'p':'e':'d':'e':'f':' ':_ -> ""
             'i':'n':'l':'i':'n':'e':' ':arg' ->
-		case span (\c -> c /= '{' && c /= '=') arg' of
-		(header, body) ->
-		    outCLine pos++
-		    "#ifndef __GNUC__\n" ++
-		    "extern inline\n" ++
-		    "#endif\n"++
-		    header++
-		    "\n#ifndef __GNUC__\n" ++
-		    ";\n" ++
-		    "#else\n"++
-		    body++
-		    "\n#endif\n"
+                case span (\c -> c /= '{' && c /= '=') arg' of
+                (header, body) ->
+                    outCLine pos++
+                    "#ifndef __GNUC__\n" ++
+                    "extern inline\n" ++
+                    "#endif\n"++
+                    header++
+                    "\n#ifndef __GNUC__\n" ++
+                    ";\n" ++
+                    "#else\n"++
+                    body++
+                    "\n#endif\n"
             _ -> outCLine pos++arg++"\n"
         _ | conditional key -> outCLine pos++"#"++key++" "++arg++"\n"
         _ -> ""
