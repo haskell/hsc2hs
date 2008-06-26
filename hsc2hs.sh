@@ -2,11 +2,11 @@
 tflag="--template=$HSC2HS_DIR/template-hsc.h"
 for arg do
     case "$arg" in
-        -c*)    HSC2HS_EXTRA=;;
-        --cc=*) HSC2HS_EXTRA=;;
-	-t*)	tflag=;;
-	--template=*) tflag=;;
-        --)     break;;
+        -c*)          HSC2HS_EXTRA=;;
+        --cc=*)       HSC2HS_EXTRA=;;
+        -t*)          tflag=;;
+        --template=*) tflag=;;
+        --)           break;;
     esac
 done
 
