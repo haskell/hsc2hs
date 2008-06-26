@@ -632,11 +632,7 @@ rawSystemL :: String -> Bool -> FilePath -> [String] -> IO ()
 rawSystemL action flg prog args = do
   let cmdLine = prog++" "++unwords args
   when flg $ hPutStrLn stderr ("Executing: " ++ cmdLine)
-#ifndef HAVE_rawSystem
-  exitStatus <- system cmdLine
-#else
   exitStatus <- rawSystem prog args
-#endif
   case exitStatus of
     ExitFailure _ -> die $ action ++ " failed\ncommand was: " ++ cmdLine ++ "\n"
     _             -> return ()
