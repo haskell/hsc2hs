@@ -1,4 +1,5 @@
 {-# OPTIONS -cpp #-}
+{-# LANGUAGE CPP, ForeignFunctionInterface #-}
 
 ------------------------------------------------------------------------
 -- Program for converting .hsc files to .hs files, by converting the
@@ -9,30 +10,34 @@
 --
 -- See the documentation in the Users' Guide for more details.
 
+#if defined(__GLASGOW_HASKELL__) && !defined(BUILD_NHC)
+#include "../../includes/ghcconfig.h"
+#endif
+
 import Control.Monad            ( MonadPlus(..), liftM, liftM2, when )
 import Data.Char                ( isAlpha, isAlphaNum, isSpace, isDigit,
                                   toUpper, intToDigit, ord )
 import Data.List                ( intersperse, isSuffixOf )
 import System.Cmd               ( system, rawSystem )
 import System.Console.GetOpt
-import System.Directory         ( removeFile, doesFileExist )
+
+#if defined(mingw32_HOST_OS)
+import Foreign
+import Foreign.C.String
+#endif
+import System.Directory         ( removeFile, doesFileExist, findExecutable )
 import System.Environment       ( getProgName, getArgs )
 import System.Exit              ( ExitCode(..), exitWith )
 import System.IO                ( hPutStr, hPutStrLn, stderr )
-
-#if __GLASGOW_HASKELL__ >= 604 || defined(__NHC__) || defined(__HUGS__)
-import System.Directory         ( findExecutable )
-#else
-import System.Directory         ( getPermissions, executable )
-import System.Environment       ( getEnv )
-import Control.Monad            ( foldM )
-#endif
 
 #if __GLASGOW_HASKELL__ >= 604
 import System.Process           ( runProcess, waitForProcess )
 import System.IO                ( openFile, IOMode(..), hClose )
 #define HAVE_runProcess
 #endif
+
+import IO                ( bracket_ )
+import Distribution.Text
 
 #if ! BUILD_NHC
 import Paths_hsc2hs             ( getDataFileName, version )
@@ -49,40 +54,6 @@ showVersion = id
 default_compiler = "ghc"
 #else
 default_compiler = "gcc"
-#endif
-
-#if defined(__GLASGOW_HASKELL__) && (__GLASGOW_HASKELL__ < 604)
-findExecutable :: String -> IO (Maybe FilePath)
-findExecutable cmd =
-  let dir = dirname cmd
-  in case dir of
-    "" -> do -- search the shell environment PATH variable for candidates
-             val <- getEnv "PATH"
-             let psep = pathSep val
-                 dirs = splitPath psep "" val
-             foldM (\a dir-> testFile a (dir++'/':cmd)) Nothing dirs
-    _  -> do testFile Nothing cmd
-  where
-    splitPath :: Char -> String -> String -> [String]
-    splitPath sep acc []                 = [reverse acc]
-    splitPath sep acc (c:path) | c==sep  = reverse acc : splitPath sep "" path
-    splitPath sep acc (c:path)           = splitPath sep (c:acc) path
-
-    pathSep s = if length (filter (==';') s) >0 then ';' else ':'
-
-    testFile :: Maybe String -> String -> IO (Maybe String)
-    testFile gotit@(Just _) path = return gotit
-    testFile Nothing path = do
-        ok <- doesFileExist path
-        if ok then perms path else return Nothing
-
-    perms file = do
-        p <- getPermissions file
-        return (if executable p then Just file else Nothing)
-
-    dirname  = reverse . safetail . dropWhile (not.(`elem`"\\/")) . reverse
-      where safetail [] = []
-            safetail (_:x) = x
 #endif
 
 versionString :: String
@@ -104,7 +75,7 @@ data Flag
 
 template_flag :: Flag -> Bool
 template_flag (Template _) = True
-template_flag _            = False
+template_flag _		   = False
 
 include :: String -> Flag
 include s@('\"':_) = Include s
@@ -152,14 +123,44 @@ main = do
     args <- getArgs
     let (flags, files, errs) = getOpt Permute options args
 
-        -- If there is no Template flag explicitly specified,
-        -- use the file placed by the Cabal installation.
-    flags_w_tpl <-
-        if any template_flag flags then
-            return flags
-          else do
-            templ <- getDataFileName "template-hsc.h"
-            return (Template templ : flags)
+    -- If there is no Template flag explicitly specified, try
+    -- to find one. We first look near the executable.  This only
+    -- works on Win32 or Hugs (getExecDir). If this finds a template
+    -- file then it's certainly the one we want, even if hsc2hs isn't
+    -- installed where we told Cabal it would be installed.
+    --
+    -- Next we try the location we told Cabal about.
+    --
+    -- If neither of the above work, then hopefully we're on Unix and
+    -- there's a wrapper script which specifies an explicit template flag.
+    flags_w_tpl0 <-
+        if any template_flag flags then return flags
+        else do mb_path <- getExecDir "/bin/hsc2hs.exe"
+                mb_templ1 <-
+                   case mb_path of
+                   Nothing   -> return Nothing
+                   Just path -> do
+                   -- Euch, this is horrible. Unfortunately
+                   -- Paths_hsc2hs isn't too useful for a
+                   -- relocatable binary, though.
+                     let templ1 = path ++ "/hsc2hs-" ++ display Paths_hsc2hs.version ++ "/template-hsc.h"
+                     exists1 <- doesFileExist templ1
+                     if exists1
+                        then return (Just templ1)
+                        else return Nothing
+                case mb_templ1 of
+                    Just templ1 -> return (Template templ1 : flags)
+                    Nothing -> do
+                        templ2 <- getDataFileName "template-hsc.h"
+                        exists2 <- doesFileExist templ2
+                        if exists2 then return (Template templ2 : flags)
+                                   else return flags
+
+    -- take only the last --template flag on the cmd line
+    let
+      (before,tpl:after) = break template_flag (reverse flags_w_tpl0)
+      flags_w_tpl = reverse (before ++ tpl : filter (not.template_flag) after)
+
     case (files, errs) of
         (_, _)
             | any isHelp    flags_w_tpl -> bye (usageInfo header options)
@@ -187,10 +188,10 @@ processFile flags name
   = do let file_name = dosifyPath name
        s <- readFile file_name
        case parser of
-           Parser p -> case p (SourcePos file_name 1) s of
-               Success _ _ _ toks -> output flags file_name toks
-               Failure (SourcePos name' line) msg ->
-                   die (name'++":"++show line++": "++msg++"\n")
+    	   Parser p -> case p (SourcePos file_name 1) s of
+    	       Success _ _ _ toks -> output flags file_name toks
+    	       Failure (SourcePos name' line) msg ->
+    		   die (name'++":"++show line++": "++msg++"\n")
 
 ------------------------------------------------------------------------
 -- A deterministic parser which remembers the text which has been parsed.
@@ -541,11 +542,11 @@ output flags name toks = do
 -- via GHC has changed a few times, so this seems to be the only way...  :-P * * *
                           ++ ".exe"
 #endif
-        outHFile     = outBase++"_hsc.h"
+	outHFile     = outBase++"_hsc.h"
         outHName     = outDir++outHFile
         outCName     = outDir++outBase++"_hsc.c"
 
-        beVerbose    = any (\ x -> case x of { Verbose -> True; _ -> False}) flags
+	beVerbose    = any (\ x -> case x of { Verbose -> True; _ -> False}) flags
 
     let execProgName
             | null outDir = dosifyPath ("./" ++ progName)
@@ -563,17 +564,15 @@ output flags name toks = do
 
     compiler <- case [c | Compiler c <- flags] of
         []  -> do
-            mb_path <- findExecutable default_compiler
-            case mb_path of
-                Nothing -> die ("Can't find "++default_compiler++"\n")
-                Just path -> return path
-        [c] -> return c
-        _   -> onlyOne "compiler"
+                  mb_path <- findExecutable default_compiler
+                  case mb_path of
+                      Nothing -> die ("Can't find "++default_compiler++"\n")
+                      Just path -> return path
+        cs  -> return (last cs)
 
     linker <- case [l | Linker l <- flags] of
         []  -> return compiler
-        [l] -> return l
-        _   -> onlyOne "linker"
+        ls  -> return (last ls)
 
     writeFile cProgName $
         concatMap outFlagHeaderCProg flags++
@@ -590,22 +589,22 @@ output flags name toks = do
        exitWith ExitSuccess
 
     rawSystemL ("compiling " ++ cProgName) beVerbose compiler
-        (  ["-c"]
+	(  ["-c"]
         ++ [f | CompFlag f <- flags]
         ++ [cProgName]
         ++ ["-o", oProgName]
-        )
-    removeFile cProgName
+	)
+    finallyRemove cProgName $ do
 
     rawSystemL ("linking " ++ oProgName) beVerbose linker
         (  [f | LinkFlag f <- flags]
         ++ [oProgName]
         ++ ["-o", progName]
-        )
-    removeFile oProgName
+	)
+    finallyRemove oProgName $ do
 
     rawSystemWithStdOutL ("running " ++ execProgName) beVerbose execProgName [] outName
-    removeFile progName
+    finallyRemove progName $ do
 
     when needsH $ writeFile outHName $
         "#ifndef "++includeGuard++"\n" ++
@@ -625,8 +624,8 @@ output flags name toks = do
     when needsC $ writeFile outCName $
         "#include \""++outHFile++"\"\n"++
         concatMap outTokenC specials
-        -- NB. outHFile not outHName; works better when processed
-        -- by gcc or mkdependC.
+	-- NB. outHFile not outHName; works better when processed
+	-- by gcc or mkdependC.
 
 rawSystemL :: String -> Bool -> FilePath -> [String] -> IO ()
 rawSystemL action flg prog args = do
@@ -652,6 +651,19 @@ rawSystemWithStdOutL action flg prog args outFile = do
   case exitStatus of
     ExitFailure _ -> die $ action ++ " failed\ncommand was: " ++ cmdLine ++ "\n"
     _             -> return ()
+
+-- delay the cleanup of generated files until the end; attempts to
+-- get around intermittent failure to delete files which has
+-- just been exec'ed by a sub-process (Win32 only.)
+finallyRemove :: FilePath -> IO a -> IO a
+finallyRemove fp act =
+  bracket_ (return fp)
+           (const $ noisyRemove fp)
+           act
+ where
+  noisyRemove fpath =
+    catch (removeFile fpath)
+          (\ e -> hPutStrLn stderr ("Failed to remove file " ++ fpath ++ "; error= " ++ show e))
 
 onlyOne :: String -> IO a
 onlyOne what = die ("Only one "++what++" may be specified\n")
@@ -715,21 +727,21 @@ outHeaderHs flags inH toks =
         (name, "")      -> name
         (name, _:value) -> name++'=':dropWhile isSpace value
     outOption s =
-        "#if __GLASGOW_HASKELL__ && __GLASGOW_HASKELL__ < 603\n" ++
-        "    printf (\"{-# OPTIONS %s #-}\\n\", \""++
+	"#if __GLASGOW_HASKELL__ && __GLASGOW_HASKELL__ < 603\n" ++
+	"    printf (\"{-# OPTIONS %s #-}\\n\", \""++
                   showCString s++"\");\n"++
-        "#else\n"++
-        "    printf (\"{-# OPTIONS_GHC %s #-}\\n\", \""++
+	"#else\n"++
+	"    printf (\"{-# OPTIONS_GHC %s #-}\\n\", \""++
                   showCString s++"\");\n"++
-        "#endif\n"
+	"#endif\n"
     outInclude s =
-        "#if __GLASGOW_HASKELL__ && __GLASGOW_HASKELL__ < 603\n" ++
-        "    printf (\"{-# OPTIONS -#include %s #-}\\n\", \""++
+	"#if __GLASGOW_HASKELL__ && __GLASGOW_HASKELL__ < 603\n" ++
+	"    printf (\"{-# OPTIONS -#include %s #-}\\n\", \""++
                   showCString s++"\");\n"++
-        "#else\n"++
-        "    printf (\"{-# INCLUDE %s #-}\\n\", \""++
+	"#else\n"++
+	"    printf (\"{-# INCLUDE %s #-}\\n\", \""++
                   showCString s++"\");\n"++
-        "#endif\n"
+	"#endif\n"
 
 outTokenHs :: Token -> String
 outTokenHs (Text pos txt) =
@@ -805,18 +817,18 @@ outTokenC (pos, key, arg) =
             's':'t':'r':'u':'c':'t':' ':_ -> ""
             't':'y':'p':'e':'d':'e':'f':' ':_ -> ""
             'i':'n':'l':'i':'n':'e':' ':arg' ->
-                case span (\c -> c /= '{' && c /= '=') arg' of
-                (header, body) ->
-                    outCLine pos++
-                    "#ifndef __GNUC__\n" ++
-                    "extern inline\n" ++
-                    "#endif\n"++
-                    header++
-                    "\n#ifndef __GNUC__\n" ++
-                    ";\n" ++
-                    "#else\n"++
-                    body++
-                    "\n#endif\n"
+		case span (\c -> c /= '{' && c /= '=') arg' of
+		(header, body) ->
+		    outCLine pos++
+		    "#ifndef __GNUC__\n" ++
+		    "extern inline\n" ++
+		    "#endif\n"++
+		    header++
+		    "\n#ifndef __GNUC__\n" ++
+		    ";\n" ++
+		    "#else\n"++
+		    body++
+		    "\n#endif\n"
             _ -> outCLine pos++arg++"\n"
         _ | conditional key -> outCLine pos++"#"++key++" "++arg++"\n"
         _ -> ""
@@ -874,3 +886,30 @@ subst _ _ = id
 
 dosifyPath :: String -> String
 dosifyPath = subst '/' '\\'
+
+-- (getExecDir cmd) returns the directory in which the current
+--                  executable, which should be called 'cmd', is running
+-- So if the full path is /a/b/c/d/e, and you pass "d/e" as cmd,
+-- you'll get "/a/b/c" back as the result
+getExecDir :: String -> IO (Maybe String)
+getExecDir cmd =
+    getExecPath >>= maybe (return Nothing) removeCmdSuffix
+    where unDosifyPath = subst '\\' '/'
+          initN n = reverse . drop n . reverse
+          removeCmdSuffix = return . Just . initN (length cmd) . unDosifyPath
+
+getExecPath :: IO (Maybe String)
+#if defined(mingw32_HOST_OS)
+getExecPath =
+     allocaArray len $ \buf -> do
+         ret <- getModuleFileName nullPtr buf len
+         if ret == 0 then return Nothing
+	             else liftM Just $ peekCString buf
+    where len = 2048 -- Plenty, PATH_MAX is 512 under Win32.
+
+foreign import stdcall unsafe "GetModuleFileNameA"
+    getModuleFileName :: Ptr () -> CString -> Int -> IO Int32
+#else
+getExecPath = return Nothing
+#endif
+
