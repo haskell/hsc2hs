@@ -50,11 +50,8 @@ version = "0.67" -- TODO!!!
 showVersion = id
 #endif
 
-#ifdef __GLASGOW_HASKELL__
-default_compiler = "ghc"
-#else
+default_compiler :: String
 default_compiler = "gcc"
-#endif
 
 versionString :: String
 versionString = "hsc2hs version " ++ showVersion version ++ "\n"
