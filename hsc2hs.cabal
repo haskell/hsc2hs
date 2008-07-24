@@ -37,5 +37,5 @@ Executable hsc2hs
                        process    >= 1   && < 1.1
     else
         Build-Depends: base < 3
-    Build-Depends: haskell98, Cabal
+    Build-Depends: haskell98
 

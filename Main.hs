@@ -37,7 +37,6 @@ import System.IO                ( openFile, IOMode(..), hClose )
 #endif
 
 import IO                ( bracket_ )
-import Distribution.Text
 
 #if ! BUILD_NHC
 import Paths_hsc2hs             ( getDataFileName, version )
@@ -140,7 +139,7 @@ main = do
                    -- Euch, this is horrible. Unfortunately
                    -- Paths_hsc2hs isn't too useful for a
                    -- relocatable binary, though.
-                     let templ1 = path ++ "/hsc2hs-" ++ display Paths_hsc2hs.version ++ "/template-hsc.h"
+                     let templ1 = path ++ "/hsc2hs-" ++ showVersion Paths_hsc2hs.version ++ "/template-hsc.h"
                      exists1 <- doesFileExist templ1
                      if exists1
                         then return (Just templ1)
