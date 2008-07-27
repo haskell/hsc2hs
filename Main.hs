@@ -592,36 +592,36 @@ output flags name toks = do
 	)
     finallyRemove cProgName $ do
 
-    rawSystemL ("linking " ++ oProgName) beVerbose linker
+      rawSystemL ("linking " ++ oProgName) beVerbose linker
         (  [f | LinkFlag f <- flags]
         ++ [oProgName]
         ++ ["-o", progName]
 	)
-    finallyRemove oProgName $ do
+      finallyRemove oProgName $ do
 
-    rawSystemWithStdOutL ("running " ++ execProgName) beVerbose execProgName [] outName
-    finallyRemove progName $ do
+        rawSystemWithStdOutL ("running " ++ execProgName) beVerbose execProgName [] outName
+        finallyRemove progName $ do
 
-    when needsH $ writeFile outHName $
-        "#ifndef "++includeGuard++"\n" ++
-        "#define "++includeGuard++"\n" ++
-        "#if __GLASGOW_HASKELL__ && __GLASGOW_HASKELL__ < 409\n" ++
-        "#include <Rts.h>\n" ++
-        "#endif\n" ++
-        "#include <HsFFI.h>\n" ++
-        "#if __NHC__\n" ++
-        "#undef HsChar\n" ++
-        "#define HsChar int\n" ++
-        "#endif\n" ++
-        concatMap outFlagH flags++
-        concatMap outTokenH specials++
-        "#endif\n"
+          when needsH $ writeFile outHName $
+            "#ifndef "++includeGuard++"\n" ++
+            "#define "++includeGuard++"\n" ++
+            "#if __GLASGOW_HASKELL__ && __GLASGOW_HASKELL__ < 409\n" ++
+            "#include <Rts.h>\n" ++
+            "#endif\n" ++
+            "#include <HsFFI.h>\n" ++
+            "#if __NHC__\n" ++
+            "#undef HsChar\n" ++
+            "#define HsChar int\n" ++
+            "#endif\n" ++
+            concatMap outFlagH flags++
+            concatMap outTokenH specials++
+            "#endif\n"
 
-    when needsC $ writeFile outCName $
-        "#include \""++outHFile++"\"\n"++
-        concatMap outTokenC specials
-	-- NB. outHFile not outHName; works better when processed
-	-- by gcc or mkdependC.
+          when needsC $ writeFile outCName $
+            "#include \""++outHFile++"\"\n"++
+            concatMap outTokenC specials
+            -- NB. outHFile not outHName; works better when processed
+            -- by gcc or mkdependC.
 
 rawSystemL :: String -> Bool -> FilePath -> [String] -> IO ()
 rawSystemL action flg prog args = do
