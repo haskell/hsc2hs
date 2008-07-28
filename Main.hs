@@ -38,8 +38,8 @@ import System.IO                ( openFile, IOMode(..), hClose )
 
 import IO                ( bracket_ )
 
-#if ! BUILD_NHC
-import Paths_hsc2hs             ( getDataFileName, version )
+#ifndef BUILD_NHC
+import Paths_hsc2hs as Main     ( getDataFileName, version )
 import Data.Version             ( showVersion )
 #else
 import System.Directory         ( getCurrentDirectory )
@@ -139,7 +139,7 @@ main = do
                    -- Euch, this is horrible. Unfortunately
                    -- Paths_hsc2hs isn't too useful for a
                    -- relocatable binary, though.
-                     let templ1 = path ++ "/hsc2hs-" ++ showVersion Paths_hsc2hs.version ++ "/template-hsc.h"
+                     let templ1 = path ++ "/hsc2hs-" ++ showVersion Main.version ++ "/template-hsc.h"
                      exists1 <- doesFileExist templ1
                      if exists1
                         then return (Just templ1)
