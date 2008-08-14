@@ -10,6 +10,7 @@ FROMC  = ../libraries/base/System/Console/GetOpt.$C \
 	 ../libraries/directory/System/Directory.$C \
 	 ../libraries/base/Control/Monad.$C \
 	 ../libraries/base/Control/Exception.$C \
+	 ../libraries/base/Control/Exception/Base.$C \
 	 ../libraries/base/Data/Typeable.$C \
 	 ../libraries/base/Data/HashTable.$C \
 	 ../libraries/base/Data/Bits.$C \
