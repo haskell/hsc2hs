@@ -18,7 +18,6 @@ import Control.Monad            ( MonadPlus(..), liftM, liftM2, when )
 import Data.Char                ( isAlpha, isAlphaNum, isSpace, isDigit,
                                   toUpper, intToDigit, ord )
 import Data.List                ( intersperse, isSuffixOf )
-import System.Cmd               ( system, rawSystem )
 import System.Console.GetOpt
 
 #if defined(mingw32_HOST_OS)
@@ -34,6 +33,11 @@ import System.IO                ( hPutStr, hPutStrLn, stderr )
 import System.Process           ( runProcess, waitForProcess )
 import System.IO                ( openFile, IOMode(..), hClose )
 #define HAVE_runProcess
+#endif
+
+import System.Cmd               ( rawSystem )
+#ifndef HAVE_runProcess
+import System.Cmd               ( system )
 #endif
 
 import IO                ( bracket_ )
