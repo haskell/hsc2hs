@@ -1,3 +1,4 @@
+#!/bin/sh
 
 tflag="--template=$datadir/template-hsc.h"
 for arg do
