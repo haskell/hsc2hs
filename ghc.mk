@@ -5,7 +5,7 @@ utils/hsc2hs_dist_MODULES = Main Paths_hsc2hs
 utils/hsc2hs_VERSION = 0.67
 
 ifeq "$(Windows)" "YES"
-utils/hsc2hs_dist_PROG = hsc2hs
+utils/hsc2hs_dist_PROG = $(GHC_HSC2HS_PGM)
 $(eval $(call build-prog,utils/hsc2hs,dist,0))
 
 $(HSC2HS_INPLACE) : inplace/hsc2hs-$(utils/hsc2hs_VERSION)/template-hsc.h
