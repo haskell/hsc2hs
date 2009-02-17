@@ -1,6 +1,7 @@
 #!/bin/sh
 
 tflag="--template=$datadir/template-hsc.h"
+Iflag="-I$datadir/../include/"
 for arg do
     case "$arg" in
         -c*)          HSC2HS_EXTRA=;;
@@ -11,4 +12,4 @@ for arg do
     esac
 done
 
-exec $executablename $tflag $HSC2HS_EXTRA ${1+"$@"}
+exec $executablename $tflag $HSC2HS_EXTRA ${1+"$@"} "$Iflag"

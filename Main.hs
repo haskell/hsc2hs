@@ -144,12 +144,14 @@ main = do
                    -- Paths_hsc2hs isn't too useful for a
                    -- relocatable binary, though.
                      let templ1 = path ++ "/hsc2hs-" ++ showVersion Main.version ++ "/template-hsc.h"
+                         incl = path ++ "/include/"
                      exists1 <- doesFileExist templ1
                      if exists1
-                        then return (Just templ1)
+                        then return $ Just (Template templ1,
+                                            CompFlag ("-I" ++ incl))
                         else return Nothing
                 case mb_templ1 of
-                    Just templ1 -> return (Template templ1 : flags)
+                    Just (templ1, incl) -> return (templ1 : flags ++ [incl])
                     Nothing -> do
                         templ2 <- getDataFileName "template-hsc.h"
                         exists2 <- doesFileExist templ2
