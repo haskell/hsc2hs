@@ -5,21 +5,34 @@ TARGET = ${DST}/hsc2hs$(EXE)
 
 SRCS   = Main.hs
 FROMC  = ../libraries/getopt/System/Console/GetOpt.$C \
+	 ../libraries/directory/System/Directory.$C \
 	 ../libraries/base/Data/List.$C \
 	 ../libraries/process/System/Cmd.$C \
-	 ../libraries/directory/System/Directory.$C \
 	 ../libraries/base/Control/Monad.$C \
-	 ../libraries/base/Control/Exception.$C \
 	 ../libraries/base/Control/Exception/Base.$C \
-	 ../libraries/base/Data/Typeable.$C \
-	 ../libraries/base/Data/HashTable.$C \
-	 ../libraries/base/Data/Bits.$C \
-	 ../libraries/base/NHC/SizedTypes.$C \
 	 ../libraries/base/Foreign/C/String.$C \
 	 ../libraries/base/Foreign/Marshal/Alloc.$C \
+	 ../libraries/base/System/Posix/Internals.$C \
+	 ../libraries/filepath/System/FilePath/Posix.$C \
 	 ../libraries/base/Foreign/Marshal/Array.$C \
 	 ../libraries/base/Foreign/Marshal/Utils.$C \
-	 ../libraries/filepath/System/FilePath/Posix.$C
+	 ../libraries/base/NHC/PosixTypes.$C \
+	 ../libraries/base/Data/Typeable.$C \
+	 ../libraries/base/Data/HashTable.$C \
+	 ../libraries/base/NHC/SizedTypes.$C \
+	 ../libraries/base/Data/Bits.$C \
+	 ../libraries/base/Foreign/C/Types.$C
+
+FMERROR = ../libraries/base/Foreign/Marshal/Error.$C
+SIERROR = ../libraries/base/System/IO/Error.$C
+FCERROR = ../libraries/base/Foreign/C/Error.$C
+
+REALC =  ../libraries/base/cbits/dirUtils.c
+
+CINCLUDES = -I../libraries/base/include -I../libraries/directory/include
+
+#	 ../libraries/base/Control/Exception.$C \
+#	 ../libraries/base/System/Posix/Types.$C \
 
 ifeq "$(findstring ghc, ${HC})" "ghc"
 HFLAGS = $(shell $(LOCAL)fixghc $(GHCSYM) -package base -package lang -package process -package directory -package getopt )
@@ -57,6 +70,9 @@ $(OBJDIR):
 
 fromC: $(OBJDIR)
 	cp $(FROMC) .
-	$(LOCAL)nhc98 -cpp -o $(TARGET) -d$(OBJDIR) *.$C
+	cp $(FMERROR) ./FMError.$C
+	cp $(SIERROR) ./SIError.$C
+	cp $(FCERROR) ./FCError.$C
+	$(LOCAL)nhc98 -cpp -o $(TARGET) -d$(OBJDIR) $(CINCLUDES) *.$C $(REALC)
 	$(HOSTSTRIP) $(TARGET)
 
