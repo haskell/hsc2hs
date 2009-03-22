@@ -41,7 +41,7 @@ $(utils/hsc2hs_template) : utils/hsc2hs/template-hsc.h
 $(utils/hsc2hs_dist_depfile) : utils/hsc2hs/dist/build/Paths_hsc2hs.hs
 $(utils/hsc2hs_dist-install_depfile) : utils/hsc2hs/dist-install/build/Paths_hsc2hs.hs
 
-utils/hsc2hs/dist%/build/Paths_hsc2hs.hs : utils/hsc2hs/ghc.mk $(MKDIRHIER)
+utils/hsc2hs/%/build/Paths_hsc2hs.hs : utils/hsc2hs/ghc.mk $(MKDIRHIER)
 	@$(RM) $@
 	@$(MKDIRHIER) $(dir $@)
 	echo "module Paths_hsc2hs where" >>$@
