@@ -135,7 +135,7 @@ main = do
     -- there's a wrapper script which specifies an explicit template flag.
     flags_w_tpl0 <-
         if any template_flag flags then return flags
-        else do mb_path <- getExecDir "/bin/hsc2hs.exe"
+        else do mb_path <- getLibDir
                 mb_templ1 <-
                    case mb_path of
                    Nothing   -> return Nothing
@@ -143,7 +143,12 @@ main = do
                    -- Euch, this is horrible. Unfortunately
                    -- Paths_hsc2hs isn't too useful for a
                    -- relocatable binary, though.
-                     let templ1 = path ++ "/hsc2hs-" ++ showVersion Main.version ++ "/template-hsc.h"
+                     let 
+#if defined(NEW_GHC_LAYOUT)
+                         templ1 = path ++ "/template-hsc.h"
+#else
+                         templ1 = path ++ "/hsc2hs-" ++ showVersion Main.version ++ "/template-hsc.h"
+#endif
                          incl = path ++ "/include/"
                      exists1 <- doesFileExist templ1
                      if exists1
@@ -889,6 +894,13 @@ subst _ _ = id
 dosifyPath :: String -> String
 dosifyPath = subst '/' '\\'
 
+getLibDir :: IO (Maybe String)
+#if defined(NEW_GHC_LAYOUT)
+getLibDir = fmap (fmap (++ "/lib")) $ getExecDir "/bin/hsc2hs.exe"
+#else
+getLibDir = getExecDir "/bin/hsc2hs.exe"
+#endif
+
 -- (getExecDir cmd) returns the directory in which the current
 --                  executable, which should be called 'cmd', is running
 -- So if the full path is /a/b/c/d/e, and you pass "d/e" as cmd,
@@ -914,4 +926,3 @@ foreign import stdcall unsafe "GetModuleFileNameA"
 #else
 getExecPath = return Nothing
 #endif
-
