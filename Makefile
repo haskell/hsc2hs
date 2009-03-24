@@ -1,3 +1,6 @@
-dir = utils/hsc2hs
-TOP = ../..
-include $(TOP)/mk/sub-makefile.mk
+TOP=../..
+ENABLE_SHELL_WRAPPERS = YES
+BINDIST_EXTRAS += template-hsc.h
+
+include $(TOP)/mk/boilerplate.mk
+include $(TOP)/mk/cabal.mk
