@@ -25,6 +25,9 @@ utils/hsc2hs_template=$(INPLACE_LIB)/template-hsc.h
 
 $(HSC2HS_INPLACE) : $(utils/hsc2hs_template)
 
+# This is a bit of a hack, but it will do
+$(HSC2HS_INPLACE) : gmp/libgmp.a
+
 # When invoked in the source tree, hsc2hs will try to link in
 # extra-libs from the packages, including libgmp.a.  So we need a
 # dependency to ensure these libs are built before we invoke hsc2hs:
