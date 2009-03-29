@@ -11,6 +11,8 @@ utils/hsc2hs_dist-install_SHELL_WRAPPER = YES
 utils/hsc2hs_dist-install_INSTALL_SHELL_WRAPPER = YES
 utils/hsc2hs_dist-install_INSTALL_INPLACE = NO
 
+ifneq "$(BINDIST)" "YES"
+
 $(eval $(call build-prog,utils/hsc2hs,dist,0))
 $(eval $(call build-prog,utils/hsc2hs,dist-install,1))
 
@@ -37,9 +39,14 @@ $(utils/hsc2hs_template) : utils/hsc2hs/template-hsc.h
 	@$(MKDIRHIER) $(dir $@)
 	$(CP) $< $@
 
+endif
+
 install: install_utils/hsc2hs_dist_install
 
 .PHONY: install_utils/hsc2hs_dist_install
 install_utils/hsc2hs_dist_install: utils/hsc2hs/template-hsc.h
 	$(MKDIRHIER $(datadir)
 	$(CP) $< $(datadir)
+
+$(eval $(call bindist,utils/hsc2hs,ghc.mk template-hsc.h))
+
