@@ -48,5 +48,5 @@ install_utils/hsc2hs_dist_install: utils/hsc2hs/template-hsc.h
 	$(MKDIRHIER $(datadir)
 	$(CP) $< $(datadir)
 
-$(eval $(call bindist,utils/hsc2hs,ghc.mk template-hsc.h))
+BINDIST_EXTRAS += utils/hsc2hs/template-hsc.h
 
