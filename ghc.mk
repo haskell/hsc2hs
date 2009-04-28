@@ -47,8 +47,7 @@ install: install_utils/hsc2hs_dist_install
 
 .PHONY: install_utils/hsc2hs_dist_install
 install_utils/hsc2hs_dist_install: utils/hsc2hs/template-hsc.h
-	$(MKDIRHIER $(datadir)
-	$(CP) $< $(datadir)
+	$(INSTALL_DATA) $(INSTALL_OPTS) $< $(DESTDIR)$(datadir)
 
 BINDIST_EXTRAS += utils/hsc2hs/template-hsc.h
 
