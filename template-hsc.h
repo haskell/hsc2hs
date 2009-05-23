@@ -48,7 +48,7 @@
 
 #define hsc_type(t)                                         \
     if ((t)(int)(t)1.4 == (t)1.4)                           \
-        printf ("%s%d",                                     \
+        printf ("%s%zu",                                    \
                 (t)(-1) < (t)0 ? "Int" : "Word",            \
                 sizeof (t) * 8);                            \
     else                                                    \
