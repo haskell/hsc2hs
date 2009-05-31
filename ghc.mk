@@ -38,8 +38,8 @@ endif
 $(HSC2HS_INPLACE) : $(OTHER_LIBS)
 
 $(utils/hsc2hs_template) : utils/hsc2hs/template-hsc.h
-	@$(MKDIRHIER) $(dir $@)
-	$(CP) $< $@
+	"$(MKDIRHIER)" $(dir $@)
+	"$(CP)" $< $@
 
 endif
 
