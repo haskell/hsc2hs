@@ -27,9 +27,10 @@ ifneq "$(BINDIST)" "YES"
 
 $(HSC2HS_INPLACE) : $(utils/hsc2hs_template)
 
-# This is a bit of a hack, but it will do
+# This is a bit of a hack, but it will do. In particular, if we are
+# using integer-gmp then libgmp.a needs to exist.
 ifeq "$(HaveLibGmp)" "NO"
-$(HSC2HS_INPLACE) : gmp/libgmp.a
+$(HSC2HS_INPLACE) : $(OTHER_LIBS)
 endif
 
 # When invoked in the source tree, hsc2hs will try to link in
