@@ -273,12 +273,10 @@ satisfy_ p = satisfy p >> return ()
 char_ :: Char -> Parser ()
 char_ c = do
     satisfy_ (== c) `message` (show c++" expected")
-    return ()
 
 anyChar_ :: Parser ()
 anyChar_ = do
     satisfy_ (const True) `message` "Unexpected end of file"
-    return ()
 
 any2Chars_ :: Parser ()
 any2Chars_ = anyChar_ >> anyChar_
