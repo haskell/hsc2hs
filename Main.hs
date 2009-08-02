@@ -745,7 +745,7 @@ outHeaderHs flags inH toks =
 	"#if __GLASGOW_HASKELL__ && __GLASGOW_HASKELL__ < 603\n" ++
 	"    printf (\"{-# OPTIONS -#include %s #-}\\n\", \""++
                   showCString s++"\");\n"++
-	"#else\n"++
+	"#elif __GLASGOW_HASKELL__ < 610\n"++
 	"    printf (\"{-# INCLUDE %s #-}\\n\", \""++
                   showCString s++"\");\n"++
 	"#endif\n"
