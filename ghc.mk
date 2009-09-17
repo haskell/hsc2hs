@@ -21,7 +21,7 @@ utils/hsc2hs_dist-install_MODULES = $(utils/hsc2hs_dist_MODULES)
 utils/hsc2hs_dist_HC_OPTS         += -DNEW_GHC_LAYOUT
 utils/hsc2hs_dist-install_HC_OPTS += -DNEW_GHC_LAYOUT
 
-utils/hsc2hs_template=$(INPLACE_LIB)/template-hsc.h
+utils/hsc2hs_template=$(INPLACE_TOPDIR)/template-hsc.h
 
 ifneq "$(BINDIST)" "YES"
 
@@ -48,7 +48,7 @@ install: install_utils/hsc2hs_dist_install
 
 .PHONY: install_utils/hsc2hs_dist_install
 install_utils/hsc2hs_dist_install: utils/hsc2hs/template-hsc.h
-	$(INSTALL_DATA) $(INSTALL_OPTS) $< $(DESTDIR)$(datadir)
+	$(INSTALL_HEADER) $(INSTALL_OPTS) $< $(DESTDIR)$(topdir)
 
 BINDIST_EXTRAS += utils/hsc2hs/template-hsc.h
 
