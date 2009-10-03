@@ -38,8 +38,7 @@ endif
 # dependency to ensure these libs are built before we invoke hsc2hs:
 $(HSC2HS_INPLACE) : $(OTHER_LIBS)
 
-$(utils/hsc2hs_template) : utils/hsc2hs/template-hsc.h
-	"$(MKDIRHIER)" $(dir $@)
+$(utils/hsc2hs_template) : utils/hsc2hs/template-hsc.h | $$(dir $$@)
 	"$(CP)" $< $@
 
 endif
