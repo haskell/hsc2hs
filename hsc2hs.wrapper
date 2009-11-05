@@ -12,4 +12,4 @@ for arg do
     esac
 done
 
-exec $executablename $tflag $HSC2HS_EXTRA ${1+"$@"} "$Iflag"
+exec "$executablename" "$tflag" $HSC2HS_EXTRA ${1+"$@"} "$Iflag"
