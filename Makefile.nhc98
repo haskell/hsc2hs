@@ -4,7 +4,7 @@ OBJDIR = ${BUILDDIR}/obj/hsc2hs
 TARGET = ${DST}/hsc2hs$(EXE)
 
 SRCS   = Main.hs
-FROMC  = ../libraries/getopt/System/Console/GetOpt.$C \
+FROMC  = ../libraries/base/System/Console/GetOpt.$C \
 	 ../libraries/directory/System/Directory.$C \
 	 ../libraries/base/Data/List.$C \
 	 ../libraries/process/System/Cmd.$C \
@@ -35,7 +35,7 @@ CINCLUDES = -I../libraries/base/include -I../libraries/directory/include
 #	 ../libraries/base/System/Posix/Types.$C \
 
 ifeq "$(findstring ghc, ${HC})" "ghc"
-HFLAGS = $(shell $(LOCAL)fixghc $(GHCSYM) -package base -package lang -package process -package directory -package getopt )
+HFLAGS = $(shell $(LOCAL)fixghc $(GHCSYM) -package base -package lang -package process -package directory )
 export HFLAGS
 endif
 ifeq "$(findstring hbc, ${HC})" "hbc"
@@ -43,7 +43,7 @@ HFLAGS =
 export HFLAGS
 endif
 ifeq "$(findstring nhc98, ${HC})" "nhc98"
-HFLAGS = -package base -package filepath -package directory -package process -package getopt +CTS -H4M -CTS
+HFLAGS = -package base -package filepath -package directory -package process +CTS -H4M -CTS
 export HFLAGS
 endif
 
@@ -51,7 +51,7 @@ all: $(TARGET)
 install: $(TARGET)
 cfiles: cleanC $(SRCS)
 	$(HMAKE) -hc=$(LOCAL)nhc98 -package base -package filepath \
-	-package directory -package process -package getopt -DBUILD_NHC -C Main.hs
+	-package directory -package process -DBUILD_NHC -C Main.hs
 clean:
 	-rm -f *.hi *.o $(OBJDIR)/*.o
 cleanC: clean
