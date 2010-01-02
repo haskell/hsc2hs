@@ -9,6 +9,10 @@
 #include <stdarg.h>
 #include <ctype.h>
 
+/* For the single-argument macros we make the macros variadic (the
+   argument is x... rather than simply x) so that arguments containing
+   commas work. See trac #590. */
+
 #ifndef offsetof
 #define offsetof(t, f) ((size_t) &((t *)0)->f)
 #endif
@@ -21,13 +25,13 @@
     printf ("{-# LINE %d \"%s\" #-}\n", line, file);
 #endif
 
-#define hsc_const(x)                        \
+#define hsc_const(x...)                     \
     if ((x) < 0)                            \
         printf ("%ld", (long)(x));          \
     else                                    \
         printf ("%lu", (unsigned long)(x));
 
-#define hsc_const_str(x)                                          \
+#define hsc_const_str(x...)                                       \
     {                                                             \
         const char *s = (x);                                      \
         printf ("\"");                                            \
@@ -46,7 +50,7 @@
         printf ("\"");                                            \
     }
 
-#define hsc_type(t)                                         \
+#define hsc_type(t...)                                      \
     if ((t)(int)(t)1.4 == (t)1.4)                           \
         printf ("%s%lu",                                    \
                 (t)(-1) < (t)0 ? "Int" : "Word",            \
@@ -69,7 +73,7 @@
 #define hsc_offset(t, f) \
     printf("(%ld)", (long) offsetof (t, f));
 
-#define hsc_size(t) \
+#define hsc_size(t...) \
     printf("(%ld)", (long) sizeof(t));
 
 #define hsc_enum(t, f, print_name, x)         \
@@ -82,7 +86,7 @@
     else                                      \
         printf ("%lu\n", (unsigned long)(x));
 
-#define hsc_haskellize(x)                                          \
+#define hsc_haskellize(x...)                                       \
     {                                                              \
         const char *s = (x);                                       \
         int upper = 0;                                             \
