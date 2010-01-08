@@ -24,7 +24,7 @@ utils/hsc2hs_dist-install_HC_OPTS += -DNEW_GHC_LAYOUT
 utils/hsc2hs_template=$(INPLACE_TOPDIR)/template-hsc.h
 
 define utils/hsc2hs_dist_SHELL_WRAPPER_EXTRA
-echo 'HSC2HS_EXTRA="$(addprefix --cflag=,$(CONF_CC_OPTS)) $(addprefix --lflag=,$(CONF_LD_OPTS))"' >> "$(WRAPPER)"
+echo 'HSC2HS_EXTRA="$(addprefix --cflag=,$(CONF_CC_OPTS)) $(addprefix --lflag=,$(CONF_LD_OPTS)) -I$(TOP)/includes"' >> "$(WRAPPER)"
 endef
 utils/hsc2hs_dist-install_SHELL_WRAPPER_EXTRA = $(utils/hsc2hs_dist_SHELL_WRAPPER_EXTRA)
 
