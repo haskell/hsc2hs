@@ -27,11 +27,10 @@ import Foreign.C.String
 import System.Directory         ( removeFile, doesFileExist, findExecutable )
 import System.Environment       ( getProgName, getArgs )
 import System.Exit              ( ExitCode(..), exitWith )
-import System.IO                ( hPutStr, hPutStrLn, stderr )
+import System.IO
 
 #if __GLASGOW_HASKELL__ >= 604
 import System.Process           ( runProcess, waitForProcess )
-import System.IO                ( openFile, IOMode(..), hClose )
 #define HAVE_runProcess
 #endif
 
@@ -193,7 +192,8 @@ die s = hPutStr stderr s >> exitWith (ExitFailure 1)
 processFile :: [Flag] -> String -> IO ()
 processFile flags name
   = do let file_name = dosifyPath name
-       s <- readFile file_name
+       h <- openBinaryFile file_name ReadMode
+       s <- hGetContents h
        case parser of
     	   Parser p -> case p (SourcePos file_name 1) s of
     	       Success _ _ _ toks -> output flags file_name toks
