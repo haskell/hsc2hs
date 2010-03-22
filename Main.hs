@@ -193,6 +193,7 @@ processFile :: [Flag] -> String -> IO ()
 processFile flags name
   = do let file_name = dosifyPath name
        h <- openBinaryFile file_name ReadMode
+       -- use binary mode so we pass through UTF-8, see GHC ticket #3837
        s <- hGetContents h
        case parser of
     	   Parser p -> case p (SourcePos file_name 1) s of
