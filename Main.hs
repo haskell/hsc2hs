@@ -194,9 +194,15 @@ processFile flags name
   = do let file_name = dosifyPath name
        h <- openBinaryFile file_name ReadMode
        -- use binary mode so we pass through UTF-8, see GHC ticket #3837
+       -- But then on Windows we end up turning things like
+       --     #let alignment t = e^M
+       -- into
+       --     #define hsc_alignment(t ) printf ( e^M);
+       -- which gcc doesn't like, so strip out any ^M characters.
        s <- hGetContents h
+       let s' = filter ('\r' /=) s
        case parser of
-    	   Parser p -> case p (SourcePos file_name 1) s of
+    	   Parser p -> case p (SourcePos file_name 1) s' of
     	       Success _ _ _ toks -> output flags file_name toks
     	       Failure (SourcePos name' line) msg ->
     		   die (name'++":"++show line++": "++msg++"\n")
