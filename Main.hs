@@ -132,11 +132,12 @@ main = do
     --
     -- If neither of the above work, then hopefully we're on Unix and
     -- there's a wrapper script which specifies an explicit template flag.
+    mb_libdir <- getLibDir
+
     flags_w_tpl0 <-
         if any template_flag flags then return flags
-        else do mb_path <- getLibDir
-                mb_templ1 <-
-                   case mb_path of
+        else do mb_templ1 <-
+                   case mb_libdir of
                    Nothing   -> return Nothing
                    Just path -> do
                    -- Euch, this is horrible. Unfortunately
@@ -174,7 +175,7 @@ main = do
             where
             isHelp    Help    = True; isHelp    _ = False
             isVersion Version = True; isVersion _ = False
-        ((_:_), []) -> mapM_ (processFile flags_w_tpl) files
+        ((_:_), []) -> mapM_ (processFile flags_w_tpl mb_libdir) files
         (_,     _ ) -> die (concat errs ++ usageInfo header options)
 
 getProgramName :: IO String
@@ -189,8 +190,8 @@ bye s = putStr s >> exitWith ExitSuccess
 die :: String -> IO a
 die s = hPutStr stderr s >> exitWith (ExitFailure 1)
 
-processFile :: [Flag] -> String -> IO ()
-processFile flags name
+processFile :: [Flag] -> Maybe String -> String -> IO ()
+processFile flags mb_libdir name
   = do let file_name = dosifyPath name
        h <- openBinaryFile file_name ReadMode
        -- use binary mode so we pass through UTF-8, see GHC ticket #3837
@@ -203,7 +204,7 @@ processFile flags name
        let s' = filter ('\r' /=) s
        case parser of
     	   Parser p -> case p (SourcePos file_name 1) s' of
-    	       Success _ _ _ toks -> output flags file_name toks
+    	       Success _ _ _ toks -> output mb_libdir flags file_name toks
     	       Failure (SourcePos name' line) msg ->
     		   die (name'++":"++show line++": "++msg++"\n")
 
@@ -529,8 +530,8 @@ splitExt name =
             where
             (restBase, restExt) = splitExt rest
 
-output :: [Flag] -> String -> [Token] -> IO ()
-output flags name toks = do
+output :: Maybe String -> [Flag] -> String -> [Token] -> IO ()
+output mb_libdir flags name toks = do
 
     (outName, outDir, outBase) <- case [f | Output f <- flags] of
         [] -> if not (null ext) && last ext == 'c'
@@ -578,6 +579,17 @@ output flags name toks = do
 
     compiler <- case [c | Compiler c <- flags] of
         []  -> do
+                  -- if this hsc2hs is part of a GHC installation on
+                  -- Windows, then we should use the mingw gcc that
+                  -- comes with GHC (#3929)
+                  case mb_libdir of
+                    Nothing -> search_path   
+                    Just d  -> do
+                      let inplace_gcc = d ++ "/../mingw/bin/gcc.exe"
+                      b <- doesFileExist inplace_gcc
+                      if b then return inplace_gcc else search_path
+            where
+                search_path = do
                   mb_path <- findExecutable default_compiler
                   case mb_path of
                       Nothing -> die ("Can't find "++default_compiler++"\n")
