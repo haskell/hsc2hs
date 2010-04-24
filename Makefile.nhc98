@@ -8,6 +8,7 @@ FROMC  = ../libraries/base/System/Console/GetOpt.$C \
 	 ../libraries/directory/System/Directory.$C \
 	 ../libraries/base/Data/List.$C \
 	 ../libraries/process/System/Cmd.$C \
+	 ../libraries/base/System/IO.$C \
 	 ../libraries/base/Control/Monad.$C \
 	 ../libraries/base/Control/Exception/Base.$C \
 	 ../libraries/base/Foreign/C/String.$C \
@@ -27,7 +28,7 @@ FMERROR = ../libraries/base/Foreign/Marshal/Error.$C
 SIERROR = ../libraries/base/System/IO/Error.$C
 FCERROR = ../libraries/base/Foreign/C/Error.$C
 
-REALC =  ../libraries/base/cbits/dirUtils.c
+#REALC =  ../libraries/base/cbits/dirUtils.c
 
 CINCLUDES = -I../libraries/base/include -I../libraries/directory/include
 
