@@ -659,8 +659,10 @@ rawSystemL action flg prog args = do
   when flg $ hPutStrLn stderr ("Executing: " ++ cmdLine)
   exitStatus <- rawSystem prog args
   case exitStatus of
-    ExitFailure _ -> die $ action ++ " failed\ncommand was: " ++ cmdLine ++ "\n"
-    _             -> return ()
+    ExitFailure exitCode -> die $ action ++ " failed "
+                               ++ "(exit code " ++ show exitCode ++ ")\n"
+                               ++ "command was: " ++ cmdLine ++ "\n"
+    _                    -> return ()
 
 rawSystemWithStdOutL :: String -> Bool -> FilePath -> [String] -> FilePath -> IO ()
 rawSystemWithStdOutL action flg prog args outFile = do
@@ -675,8 +677,10 @@ rawSystemWithStdOutL action flg prog args outFile = do
   hClose hOut
 #endif
   case exitStatus of
-    ExitFailure _ -> die $ action ++ " failed\ncommand was: " ++ cmdLine ++ "\n"
-    _             -> return ()
+    ExitFailure exitCode -> die $ action ++ " failed "
+                               ++ "(exit code " ++ show exitCode ++ ")\n"
+                               ++ "command was: " ++ cmdLine ++ "\n"
+    _                    -> return ()
 
 -- delay the cleanup of generated files until the end; attempts to
 -- get around intermittent failure to delete files which has
