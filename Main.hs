@@ -616,16 +616,16 @@ output mb_libdir flags name toks = do
 
     rawSystemL ("compiling " ++ cProgName) beVerbose compiler
 	(  ["-c"]
-        ++ [f | CompFlag f <- flags]
         ++ [cProgName]
         ++ ["-o", oProgName]
+        ++ [f | CompFlag f <- flags]
 	)
     finallyRemove cProgName $ do
 
       rawSystemL ("linking " ++ oProgName) beVerbose linker
-        (  [f | LinkFlag f <- flags]
-        ++ [oProgName]
+        (  [oProgName]
         ++ ["-o", progName]
+        ++ [f | LinkFlag f <- flags]
 	)
       finallyRemove oProgName $ do
 
