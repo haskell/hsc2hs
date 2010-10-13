@@ -45,5 +45,4 @@ Executable hsc2hs
     if flag(base3) || flag(base4)
         Build-Depends: directory  >= 1   && < 1.2,
                        process    >= 1   && < 1.1
-    Build-Depends: haskell98
 

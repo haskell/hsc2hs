@@ -14,6 +14,7 @@
 #include "../../includes/ghcconfig.h"
 #endif
 
+import Control.Exception        ( bracket_ )
 import Control.Monad            ( MonadPlus(..), liftM, liftM2, when )
 import Data.Char                ( isAlpha, isAlphaNum, isSpace, isDigit,
                                   toUpper, intToDigit, ord )
@@ -38,8 +39,6 @@ import System.Cmd               ( rawSystem )
 #ifndef HAVE_runProcess
 import System.Cmd               ( system )
 #endif
-
-import IO                ( bracket_ )
 
 #ifndef BUILD_NHC
 import Paths_hsc2hs as Main     ( getDataFileName, version )
@@ -688,7 +687,7 @@ rawSystemWithStdOutL action flg prog args outFile = do
 finallyRemove :: FilePath -> IO a -> IO a
 finallyRemove fp act =
   bracket_ (return fp)
-           (const $ noisyRemove fp)
+           (noisyRemove fp)
            act
  where
   noisyRemove fpath =
