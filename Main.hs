@@ -15,6 +15,7 @@
 #endif
 
 import Control.Exception        ( bracket_ )
+import qualified Control.Exception as Exception
 import Control.Monad            ( MonadPlus(..), liftM, liftM2, when )
 import Data.Char                ( isAlpha, isAlphaNum, isSpace, isDigit,
                                   toUpper, intToDigit, ord )
@@ -691,8 +692,11 @@ finallyRemove fp act =
            act
  where
   noisyRemove fpath =
-    catch (removeFile fpath)
-          (\ e -> hPutStrLn stderr ("Failed to remove file " ++ fpath ++ "; error= " ++ show e))
+    catchIO (removeFile fpath)
+            (\ e -> hPutStrLn stderr ("Failed to remove file " ++ fpath ++ "; error= " ++ show e))
+
+catchIO :: IO a -> (Exception.IOException -> IO a) -> IO a
+catchIO = Exception.catch
 
 onlyOne :: String -> IO a
 onlyOne what = die ("Only one "++what++" may be specified\n")
