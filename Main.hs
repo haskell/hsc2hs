@@ -600,7 +600,7 @@ output mb_libdir flags name toks = do
         []  -> return compiler
         ls  -> return (last ls)
 
-    writeFile cProgName $
+    writeBinaryFile cProgName $
         concatMap outFlagHeaderCProg flags++
         concatMap outHeaderCProg specials++
         "\nint main (int argc, char *argv [])\n{\n"++
@@ -632,7 +632,7 @@ output mb_libdir flags name toks = do
         rawSystemWithStdOutL ("running " ++ execProgName) beVerbose execProgName [] outName
         finallyRemove progName $ do
 
-          when needsH $ writeFile outHName $
+          when needsH $ writeBinaryFile outHName $
             "#ifndef "++includeGuard++"\n" ++
             "#define "++includeGuard++"\n" ++
             "#if __GLASGOW_HASKELL__ && __GLASGOW_HASKELL__ < 409\n" ++
@@ -647,11 +647,14 @@ output mb_libdir flags name toks = do
             concatMap outTokenH specials++
             "#endif\n"
 
-          when needsC $ writeFile outCName $
+          when needsC $ writeBinaryFile outCName $
             "#include \""++outHFile++"\"\n"++
             concatMap outTokenC specials
             -- NB. outHFile not outHName; works better when processed
             -- by gcc or mkdependC.
+
+writeBinaryFile :: FilePath -> String -> IO ()
+writeBinaryFile fp str = withBinaryFile fp WriteMode $ \h -> hPutStr h str
 
 rawSystemL :: String -> Bool -> FilePath -> [String] -> IO ()
 rawSystemL action flg prog args = do
