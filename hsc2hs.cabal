@@ -31,6 +31,7 @@ Flag base3
 
 Executable hsc2hs
     Main-Is: Main.hs
+    Other-Modules: HSCParser
     -- needed for ReadP (used by Data.Version)
     Hugs-Options: -98
     Extensions: CPP, ForeignFunctionInterface
