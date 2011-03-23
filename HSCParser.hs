@@ -8,6 +8,9 @@ import Data.Char                ( isAlpha, isAlphaNum, isSpace, isDigit )
 
 newtype Parser a = Parser (SourcePos -> String -> ParseResult a)
 
+runParser :: Parser a -> String -> String -> ParseResult a
+runParser (Parser p) file_name = p (SourcePos file_name 1)
+
 data ParseResult a = Success !SourcePos String String a
                    | Failure !SourcePos String
 

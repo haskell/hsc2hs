@@ -178,11 +178,10 @@ processFile flags mb_libdir name
        -- which gcc doesn't like, so strip out any ^M characters.
        s <- hGetContents h
        let s' = filter ('\r' /=) s
-       case parser of
-    	   Parser p -> case p (SourcePos file_name 1) s' of
-    	       Success _ _ _ toks -> output mb_libdir flags file_name toks
-    	       Failure (SourcePos name' line) msg ->
-    		   die (name'++":"++show line++": "++msg++"\n")
+       case runParser parser file_name s' of
+         Success _ _ _ toks -> output mb_libdir flags file_name toks
+         Failure (SourcePos name' line) msg ->
+           die (name'++":"++show line++": "++msg++"\n")
 
 getLibDir :: IO (Maybe String)
 #if defined(NEW_GHC_LAYOUT)
