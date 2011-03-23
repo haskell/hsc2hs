@@ -462,3 +462,6 @@ subst _ _ = id
 dosifyPath :: String -> String
 dosifyPath = subst '/' '\\'
 
+unDosifyPath :: String -> String
+unDosifyPath = subst '\\' '/'
+

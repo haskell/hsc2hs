@@ -194,8 +194,7 @@ getLibDir = getExecDir "/bin/hsc2hs.exe"
 getExecDir :: String -> IO (Maybe String)
 getExecDir cmd =
     getExecPath >>= maybe (return Nothing) removeCmdSuffix
-    where unDosifyPath = subst '\\' '/'
-          initN n = reverse . drop n . reverse
+    where initN n = reverse . drop n . reverse
           removeCmdSuffix = return . Just . initN (length cmd) . unDosifyPath
 
 getExecPath :: IO (Maybe String)
