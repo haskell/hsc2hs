@@ -26,7 +26,7 @@ import System.Cmd               ( system )
 #endif
 
 import System.Exit              ( ExitCode(..), exitWith )
-import System.Directory         ( removeFile, findExecutable, doesFileExist )
+import System.Directory         ( removeFile )
 
 data Flag
     = Help
@@ -70,8 +70,8 @@ splitExt name =
             where
             (restBase, restExt) = splitExt rest
 
-output :: Maybe String -> [Flag] -> String -> [Token] -> IO ()
-output mb_libdir flags name toks = do
+output :: [Flag] -> FilePath -> String -> [Token] -> IO ()
+output flags compiler name toks = do
 
     (outName, outDir, outBase) <- case [f | Output f <- flags] of
         [] -> if not (null ext) && last ext == 'c'
@@ -120,25 +120,6 @@ output mb_libdir flags name toks = do
             where
             fixChar c | isAlphaNum c = toUpper c
                       | otherwise    = '_'
-
-    compiler <- case [c | Compiler c <- flags] of
-        []  -> do
-                  -- if this hsc2hs is part of a GHC installation on
-                  -- Windows, then we should use the mingw gcc that
-                  -- comes with GHC (#3929)
-                  case mb_libdir of
-                    Nothing -> search_path   
-                    Just d  -> do
-                      let inplace_gcc = d ++ "/../mingw/bin/gcc.exe"
-                      b <- doesFileExist inplace_gcc
-                      if b then return inplace_gcc else search_path
-            where
-                search_path = do
-                  mb_path <- findExecutable default_compiler
-                  case mb_path of
-                      Nothing -> die ("Can't find "++default_compiler++"\n")
-                      Just path -> return path
-        cs  -> return (last cs)
 
     linker <- case [l | Linker l <- flags] of
         []  -> return compiler

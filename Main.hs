@@ -22,7 +22,7 @@ import System.Console.GetOpt
 import Foreign
 import Foreign.C.String
 #endif
-import System.Directory         ( doesFileExist )
+import System.Directory         ( doesFileExist, findExecutable )
 import System.Environment       ( getProgName, getArgs )
 import System.Exit              ( ExitCode(..), exitWith )
 import System.IO
@@ -155,7 +155,27 @@ processFiles flags files usage = do
                          exists2 <- doesFileExist templ2
                          if exists2 then return (Template templ2 : flags)
                                     else die ("No template specified, and template-hsc.h not located.\n\n" ++ usage)
-    mapM_ (processFile flags_w_tpl mb_libdir) files
+
+    compiler <- case [c | Compiler c <- flags_w_tpl] of
+        []  -> do
+                  -- if this hsc2hs is part of a GHC installation on
+                  -- Windows, then we should use the mingw gcc that
+                  -- comes with GHC (#3929)
+                  case mb_libdir of
+                    Nothing -> search_path   
+                    Just d  -> do
+                      let inplace_gcc = d ++ "/../mingw/bin/gcc.exe"
+                      b <- doesFileExist inplace_gcc
+                      if b then return inplace_gcc else search_path
+            where
+                search_path = do
+                  mb_path <- findExecutable default_compiler
+                  case mb_path of
+                      Nothing -> die ("Can't find "++default_compiler++"\n")
+                      Just path -> return path
+        cs  -> return (last cs)
+
+    mapM_ (processFile flags_w_tpl compiler) files
 
 getProgramName :: IO String
 getProgramName = liftM (`withoutSuffix` "-bin") getProgName
@@ -166,8 +186,8 @@ getProgramName = liftM (`withoutSuffix` "-bin") getProgName
 bye :: String -> IO a
 bye s = putStr s >> exitWith ExitSuccess
 
-processFile :: [Flag] -> Maybe String -> String -> IO ()
-processFile flags mb_libdir name
+processFile :: [Flag] -> FilePath -> String -> IO ()
+processFile flags compiler name
   = do let file_name = dosifyPath name
        h <- openBinaryFile file_name ReadMode
        -- use binary mode so we pass through UTF-8, see GHC ticket #3837
@@ -179,7 +199,7 @@ processFile flags mb_libdir name
        s <- hGetContents h
        let s' = filter ('\r' /=) s
        case runParser parser file_name s' of
-         Success _ _ _ toks -> output mb_libdir flags file_name toks
+         Success _ _ _ toks -> output flags compiler file_name toks
          Failure (SourcePos name' line) msg ->
            die (name'++":"++show line++": "++msg++"\n")
 
