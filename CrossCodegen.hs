@@ -27,9 +27,6 @@ import System.Directory (removeFile)
 import Data.Char (toLower,toUpper,isSpace)
 import Control.Exception (assert, onException)
 import Control.Monad (when,liftM,forM)
-import HSCParser (SourcePos(..), Token(..))
-import DirectCodegen (Flag(..), outFlagHeaderCProg, outHeaderCProg,
-        outCLine, parseEnum, die, catchIO, writeBinaryFile)
 import Data.Foldable (concatMap)
 import Data.Maybe (fromMaybe)
 import qualified Data.Sequence as S
@@ -39,6 +36,10 @@ import Data.Sequence ((|>),ViewL(..))
 import System.Cmd               ( system )
 #endif
 import System.Exit              ( ExitCode(..) )
+
+import C
+import Common
+import HSCParser
 
 -- A monad over IO for performing tests; keeps the commandline flags
 -- and a state counter for unique filename generation.
@@ -197,8 +198,8 @@ diagnose inputFilename output input = do
             _ -> do
                 outputSpecial output z
                 loop (zNext z)
-    loop (Zipper z@ZCursor {zCursor=Text pos text}) = do
-        outputText output pos text
+    loop (Zipper z@ZCursor {zCursor=Text pos txt}) = do
+        outputText output pos txt
         loop (zNext z)
 
 outputSpecial :: (String -> TestMonad ()) -> ZCursor Token -> TestMonad ()
@@ -225,8 +226,8 @@ outputSpecial output (z@ZCursor {zCursor=Special pos@(SourcePos file line)  key 
 outputSpecial _ _ = error "outputSpecial's argument isn't a Special"
 
 outputText :: (String -> TestMonad ()) -> SourcePos -> String -> TestMonad ()
-outputText output (SourcePos file line) text =
-    case break (=='\n') text of
+outputText output (SourcePos file line) txt =
+    case break (=='\n') txt of
         (noNewlines, []) -> output noNewlines
         (firstLine, _:restOfLines) ->
             output (firstLine ++ "\n" ++
@@ -263,7 +264,7 @@ checkValidity input = do
         when (not success) $ testFail' "compilation failed"
 
 outValidityCheck :: Token -> Int -> String
-outValidityCheck special@(Special pos key value) uniq =
+outValidityCheck s@(Special pos key value) uniq =
     case key of
        "const" -> checkValidConst value
        "offset" -> checkValidConst ("offsetof(" ++ value ++ ")")
@@ -273,7 +274,7 @@ outValidityCheck special@(Special pos key value) uniq =
        "ptr" -> checkValidConst ("offsetof(" ++ value ++ ")")
        "type" -> checkValidType 
        "enum" -> checkValidEnum
-       _ -> outHeaderCProg' special
+       _ -> outHeaderCProg' s
     where
     checkValidConst value' = "void _hsc2hs_test" ++ show uniq ++ "()\n{\n" ++ validConstTest value' ++ "}\n";
     checkValidType = "void _hsc2hs_test" ++ show uniq ++ "()\n{\n" ++ outCLine pos ++ "    (void)(" ++ value ++ ")1;\n}\n";

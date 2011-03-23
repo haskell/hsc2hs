@@ -34,6 +34,7 @@ import Data.Version             ( showVersion )
 import Paths_hsc2hs as Main     ( getDataFileName, version )
 #endif
 
+import Common
 import CrossCodegen
 import DirectCodegen
 import HSCParser
