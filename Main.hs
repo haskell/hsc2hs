@@ -189,7 +189,12 @@ bye s = putStr s >> exitWith ExitSuccess
 processFile :: [Flag] -> FilePath -> String -> IO ()
 processFile flags compiler name
   = do let file_name = dosifyPath name
-       h <- openBinaryFile file_name ReadMode
+       toks <- parseFile file_name
+       output flags compiler file_name toks
+
+parseFile :: String -> IO [Token]
+parseFile name
+  = do h <- openBinaryFile name ReadMode
        -- use binary mode so we pass through UTF-8, see GHC ticket #3837
        -- But then on Windows we end up turning things like
        --     #let alignment t = e^M
@@ -198,8 +203,8 @@ processFile flags compiler name
        -- which gcc doesn't like, so strip out any ^M characters.
        s <- hGetContents h
        let s' = filter ('\r' /=) s
-       case runParser parser file_name s' of
-         Success _ _ _ toks -> output flags compiler file_name toks
+       case runParser parser name s' of
+         Success _ _ _ toks -> return toks
          Failure (SourcePos name' line) msg ->
            die (name'++":"++show line++": "++msg++"\n")
 
