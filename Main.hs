@@ -41,11 +41,14 @@ import System.Cmd               ( rawSystem )
 import System.Cmd               ( system )
 #endif
 
-#ifndef BUILD_NHC
-import Paths_hsc2hs as Main     ( getDataFileName, version )
-import Data.Version             ( showVersion )
-#else
+#ifdef BUILD_NHC
 import System.Directory         ( getCurrentDirectory )
+#else
+import Data.Version             ( showVersion )
+import Paths_hsc2hs as Main     ( getDataFileName, version )
+#endif
+
+#ifdef BUILD_NHC
 getDataFileName s = do here <- getCurrentDirectory
                        return (here++"/"++s)
 version = "0.67" -- TODO!!!
