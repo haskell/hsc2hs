@@ -83,6 +83,8 @@ options = [
         "as if placed in the source",
     Option []    ["no-compile"] (NoArg  NoCompile)
         "stop after writing *_hsc_make.c",
+    Option ['k'] ["keep-files"] (NoArg KeepFiles)
+        "do not remove temporary files",
     Option ['v'] ["verbose"]    (NoArg  Verbose)
         "dump commands to stderr",
     Option ['?'] ["help"]       (NoArg  Help)

@@ -40,6 +40,7 @@ data Flag
     | Include   String
     | Define    String (Maybe String)
     | Output    String
+    | KeepFiles
     | Verbose
 
 die :: String -> IO a
@@ -110,6 +111,10 @@ output mb_libdir flags name toks = do
 
     let needsC = any (\(_, key, _) -> key == "def") specials
         needsH = needsC
+        keepFiles = not $ null [() | KeepFiles <- flags]
+        possiblyRemove = if keepFiles
+                         then flip const
+                         else finallyRemove
 
     let includeGuard = map fixChar outHName
             where
@@ -159,17 +164,17 @@ output mb_libdir flags name toks = do
         ++ ["-o", oProgName]
         ++ [f | CompFlag f <- flags]
 	)
-    finallyRemove cProgName $ do
+    possiblyRemove cProgName $ do
 
       rawSystemL ("linking " ++ oProgName) beVerbose linker
         (  [oProgName]
         ++ ["-o", progName]
         ++ [f | LinkFlag f <- flags]
 	)
-      finallyRemove oProgName $ do
+      possiblyRemove oProgName $ do
 
         rawSystemWithStdOutL ("running " ++ execProgName) beVerbose execProgName [] outName
-        finallyRemove progName $ do
+        possiblyRemove progName $ do
 
           when needsH $ writeBinaryFile outHName $
             "#ifndef "++includeGuard++"\n" ++
