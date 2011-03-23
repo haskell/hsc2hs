@@ -325,26 +325,35 @@ outTokenHs (Special pos key arg) =
         "enum"              -> outCLine pos++outEnum arg
         _                   -> outCLine pos++"    hsc_"++key++" ("++arg++");\n"
 
-outEnum :: String -> String
-outEnum arg =
+parseEnum :: String -> Maybe (String,String,[(Maybe String,String)])
+parseEnum arg =
     case break (== ',') arg of
-        (_, [])        -> ""
+        (_, [])        -> Nothing
         (t, _:afterT) -> case break (== ',') afterT of
             (f, afterF) -> let
-                enums []    = ""
+                enums []    = []
                 enums (_:s) = case break (== ',') s of
                     (enum, rest) -> let
                         this = case break (== '=') $ dropWhile isSpace enum of
-                            (name, []) ->
-                                "    hsc_enum ("++t++", "++f++", " ++
-                                "hsc_haskellize (\""++name++"\"), "++
-                                name++");\n"
-                            (hsName, _:cName) ->
-                                "    hsc_enum ("++t++", "++f++", " ++
-                                "printf (\"%s\", \""++hsName++"\"), "++
-                                cName++");\n"
-                        in this++enums rest
-                in enums afterF
+                            (name, []) -> (Nothing, name)
+                            (hsName, _:cName) -> (Just hsName, cName)
+                        in this:enums rest
+                in Just (t, f, enums afterF)
+
+outEnum :: String -> String
+outEnum arg = case parseEnum arg of
+    Nothing -> ""
+    Just (t,f,enums) ->
+        flip concatMap enums $ \(maybeHsName, cName) ->
+            case maybeHsName of
+               Nothing ->
+                    "    hsc_enum ("++t++", "++f++", " ++
+                    "hsc_haskellize (\""++cName++"\"), "++
+                    cName++");\n"
+               Just hsName ->
+                    "    hsc_enum ("++t++", "++f++", " ++
+                    "printf (\"%s\", \""++hsName++"\"), "++
+                    cName++");\n"
 
 outFlagH :: Flag -> String
 outFlagH (Include  f)          = "#include "++f++"\n"

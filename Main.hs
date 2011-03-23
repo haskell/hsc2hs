@@ -109,6 +109,15 @@ main = do
         ((_:_), []) -> processFiles flags files usage
         (_,     _ ) -> die (concat errs ++ usage)
 
+getProgramName :: IO String
+getProgramName = liftM (`withoutSuffix` "-bin") getProgName
+   where str `withoutSuffix` suff
+            | suff `isSuffixOf` str = take (length str - length suff) str
+            | otherwise             = str
+
+bye :: String -> IO a
+bye s = putStr s >> exitWith ExitSuccess
+
 processFiles :: [Flag] -> [FilePath] -> String -> IO ()
 processFiles flags files usage = do
     mb_libdir <- getLibDir
@@ -176,15 +185,6 @@ processFiles flags files usage = do
         cs  -> return (last cs)
 
     mapM_ (processFile flags_w_tpl compiler) files
-
-getProgramName :: IO String
-getProgramName = liftM (`withoutSuffix` "-bin") getProgName
-   where str `withoutSuffix` suff
-            | suff `isSuffixOf` str = take (length str - length suff) str
-            | otherwise             = str
-
-bye :: String -> IO a
-bye s = putStr s >> exitWith ExitSuccess
 
 processFile :: [Flag] -> FilePath -> String -> IO ()
 processFile flags compiler name
