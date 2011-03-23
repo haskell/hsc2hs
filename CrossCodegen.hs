@@ -262,6 +262,7 @@ checkValidity input = do
                         (["-c",cFile,"-o",oFile]++[f | CompFlag f <- flags])
                         Nothing
         when (not success) $ testFail' "compilation failed"
+    testLog' "compilation is error-free"
 
 outValidityCheck :: Token -> Int -> String
 outValidityCheck s@(Special pos key value) uniq =
