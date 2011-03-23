@@ -34,8 +34,9 @@ import Data.Version             ( showVersion )
 import Paths_hsc2hs as Main     ( getDataFileName, version )
 #endif
 
-import HSCParser
+import CrossCodegen
 import DirectCodegen
+import HSCParser
 
 #ifdef BUILD_NHC
 getDataFileName s = do here <- getCurrentDirectory
@@ -184,6 +185,17 @@ processFiles flags files usage = do
                       Just path -> return path
         cs  -> return (last cs)
 
+    let crossCompiling = not $ null [() | CrossCompile <- flags_w_tpl]
+        beVerbose    = not $ null [() | Verbose <- flags_w_tpl]
+        keepFiles = not $ null [() | KeepFiles <- flags_w_tpl]
+
+    outputter <- if crossCompiling
+          then return (outputCross beVerbose keepFiles compiler flags_w_tpl)
+          else do linker <- case [l | Linker l <- flags_w_tpl] of
+                      []  -> return compiler
+                      ls  -> return (last ls)
+                  return (outputDirect flags_w_tpl beVerbose keepFiles compiler linker)
+
     forM_ files (\name -> do
         (outName, outDir, outBase) <- case [f | Output f <- flags_w_tpl] of
              [] -> if not (null ext) && last ext == 'c'
@@ -202,7 +214,7 @@ processFiles flags files usage = do
              _ -> onlyOne "output file"
         let file_name = dosifyPath name
         toks <- parseFile file_name
-        output flags_w_tpl compiler outName outDir outBase file_name toks)
+        outputter outName outDir outBase file_name toks)
 
 parseFile :: String -> IO [Token]
 parseFile name

@@ -12,7 +12,7 @@ import Data.Char                ( isAlphaNum, isSpace, intToDigit,
                                   toUpper, ord )
 import Data.List                ( intersperse )
 import HSCParser                ( SourcePos(..), Token(..) )
-import Control.Monad            ( when )
+import Control.Monad            ( when, forM_ )
 import System.IO
 
 #if __GLASGOW_HASKELL__ >= 604
@@ -37,6 +37,8 @@ data Flag
     | CompFlag  String
     | LinkFlag  String
     | NoCompile
+    | CrossCompile
+    | CrossSafe
     | Include   String
     | Define    String (Maybe String)
     | Output    String
@@ -70,8 +72,8 @@ splitExt name =
             where
             (restBase, restExt) = splitExt rest
 
-output :: [Flag] -> FilePath -> FilePath -> FilePath -> FilePath -> String -> [Token] -> IO ()
-output flags compiler outName outDir outBase name toks = do
+outputDirect :: [Flag] -> Bool -> Bool -> FilePath -> FilePath -> FilePath -> FilePath -> FilePath -> String -> [Token] -> IO ()
+outputDirect flags beVerbose keepFiles compiler linker outName outDir outBase name toks = do
 
     let cProgName    = outDir++outBase++"_hsc_make.c"
         oProgName    = outDir++outBase++"_hsc_make.o"
@@ -85,8 +87,6 @@ output flags compiler outName outDir outBase name toks = do
         outHName     = outDir++outHFile
         outCName     = outDir++outBase++"_hsc.c"
 
-	beVerbose    = any (\ x -> case x of { Verbose -> True; _ -> False}) flags
-
     let execProgName
             | null outDir = dosifyPath ("./" ++ progName)
             | otherwise   = progName
@@ -95,7 +95,6 @@ output flags compiler outName outDir outBase name toks = do
 
     let needsC = any (\(_, key, _) -> key == "def") specials
         needsH = needsC
-        keepFiles = not $ null [() | KeepFiles <- flags]
         possiblyRemove = if keepFiles
                          then flip const
                          else finallyRemove
@@ -105,9 +104,12 @@ output flags compiler outName outDir outBase name toks = do
             fixChar c | isAlphaNum c = toUpper c
                       | otherwise    = '_'
 
-    linker <- case [l | Linker l <- flags] of
-        []  -> return compiler
-        ls  -> return (last ls)
+    when (not $ null [() | CrossSafe <- flags]) $
+        forM_ specials (\ (SourcePos file line,key,_) ->
+            when (not $ key `elem` ["const","offset","size","peek","poke","ptr",
+                                    "type","enum","error","warning","include","define","undef",
+                                    "if","ifdef","ifndef", "elif","else","endif"]) $
+             die (file ++ ":" ++ show line ++ " directive \"" ++ key ++ "\" is not safe for cross-compilation"))
 
     writeBinaryFile cProgName $
         concatMap outFlagHeaderCProg flags++

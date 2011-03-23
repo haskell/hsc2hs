@@ -31,7 +31,7 @@ Flag base3
 
 Executable hsc2hs
     Main-Is: Main.hs
-    Other-Modules: HSCParser, DirectCodegen
+    Other-Modules: HSCParser, DirectCodegen, CrossCodegen
     -- needed for ReadP (used by Data.Version)
     Hugs-Options: -98
     Extensions: CPP, ForeignFunctionInterface
@@ -46,4 +46,5 @@ Executable hsc2hs
     if flag(base3) || flag(base4)
         Build-Depends: directory  >= 1   && < 1.2,
                        process    >= 1   && < 1.1
+    Build-Depends: containers >= 0.2 && < 0.5
 
