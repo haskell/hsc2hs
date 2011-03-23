@@ -96,24 +96,40 @@ main :: IO ()
 main = do
     prog <- getProgramName
     let header = "Usage: "++prog++" [OPTIONS] INPUT.hsc [...]\n"
+        usage = usageInfo header options
     args <- getArgs
     let (flags, files, errs) = getOpt Permute options args
+    case (files, errs) of
+        (_, _)
+            | any isHelp    flags -> bye usage
+            | any isVersion flags -> bye versionString
+            where
+            isHelp    Help    = True; isHelp    _ = False
+            isVersion Version = True; isVersion _ = False
+        ((_:_), []) -> processFiles flags files usage
+        (_,     _ ) -> die (concat errs ++ usage)
 
-    -- If there is no Template flag explicitly specified, try
-    -- to find one. We first look near the executable.  This only
-    -- works on Win32 or Hugs (getExecDir). If this finds a template
-    -- file then it's certainly the one we want, even if hsc2hs isn't
-    -- installed where we told Cabal it would be installed.
-    --
-    -- Next we try the location we told Cabal about.
-    --
-    -- If neither of the above work, then hopefully we're on Unix and
-    -- there's a wrapper script which specifies an explicit template flag.
+processFiles :: [Flag] -> [FilePath] -> String -> IO ()
+processFiles flags files usage = do
     mb_libdir <- getLibDir
 
-    flags_w_tpl0 <-
-        if any template_flag flags then return flags
-        else do mb_templ1 <-
+    -- If there's no template specified on the commandline, try to locate it
+    flags_w_tpl <- case filter template_flag flags of
+        [_] -> return flags
+        (_:_) -> -- take only the last --template flag on the cmd line
+                 let (before,tpl:after) = break template_flag (reverse flags)
+                 in return $ reverse (before ++ tpl : filter (not.template_flag) after)
+        [] -> do -- If there is no Template flag explicitly specified, try
+                 -- to find one. We first look near the executable.  This only
+                 -- works on Win32 or Hugs (getExecDir). If this finds a template
+                 -- file then it's certainly the one we want, even if hsc2hs isn't
+                 -- installed where we told Cabal it would be installed.
+                 --
+                 -- Next we try the location we told Cabal about.
+                 --
+                 -- If neither of the above work, then hopefully we're on Unix and
+                 -- there's a wrapper script which specifies an explicit template flag.
+                 mb_templ1 <-
                    case mb_libdir of
                    Nothing   -> return Nothing
                    Just path -> do
@@ -132,28 +148,14 @@ main = do
                         then return $ Just (Template templ1,
                                             CompFlag ("-I" ++ incl))
                         else return Nothing
-                case mb_templ1 of
-                    Just (templ1, incl) -> return (templ1 : flags ++ [incl])
-                    Nothing -> do
-                        templ2 <- getDataFileName "template-hsc.h"
-                        exists2 <- doesFileExist templ2
-                        if exists2 then return (Template templ2 : flags)
-                                   else return flags
-
-    -- take only the last --template flag on the cmd line
-    let
-      (before,tpl:after) = break template_flag (reverse flags_w_tpl0)
-      flags_w_tpl = reverse (before ++ tpl : filter (not.template_flag) after)
-
-    case (files, errs) of
-        (_, _)
-            | any isHelp    flags_w_tpl -> bye (usageInfo header options)
-            | any isVersion flags_w_tpl -> bye versionString
-            where
-            isHelp    Help    = True; isHelp    _ = False
-            isVersion Version = True; isVersion _ = False
-        ((_:_), []) -> mapM_ (processFile flags_w_tpl mb_libdir) files
-        (_,     _ ) -> die (concat errs ++ usageInfo header options)
+                 case mb_templ1 of
+                     Just (templ1, incl) -> return (templ1 : flags ++ [incl])
+                     Nothing -> do
+                         templ2 <- getDataFileName "template-hsc.h"
+                         exists2 <- doesFileExist templ2
+                         if exists2 then return (Template templ2 : flags)
+                                    else die ("No template specified, and template-hsc.h not located.\n\n" ++ usage)
+    mapM_ (processFile flags_w_tpl mb_libdir) files
 
 getProgramName :: IO String
 getProgramName = liftM (`withoutSuffix` "-bin") getProgName
