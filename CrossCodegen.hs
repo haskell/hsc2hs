@@ -287,7 +287,7 @@ outValidityCheck s@(Special pos key value) uniq =
                 "}\n"
 
     -- we want this to fail if the value is syntactically invalid or isn't a constant
-    validConstTest value' = outCLine pos ++ "    static int test_array[(" ++ value' ++ ") > 0 ? 2 : 1];\n    (void)test_array;\n";
+    validConstTest value' = outCLine pos ++ "    {\n        static int test_array[(" ++ value' ++ ") > 0 ? 2 : 1];\n        (void)test_array;\n    }\n";
 
 outValidityCheck (Text _ _) _ = ""
 
