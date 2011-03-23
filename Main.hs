@@ -85,6 +85,10 @@ options = [
         "as if placed in the source",
     Option []    ["no-compile"] (NoArg  NoCompile)
         "stop after writing *_hsc_make.c",
+    Option ['x'] ["cross-compile"] (NoArg CrossCompile)
+        "activate cross-compilation mode",
+    Option [] ["cross-safe"] (NoArg CrossSafe)
+        "restrict .hsc directives to those supported by --cross-compile",
     Option ['k'] ["keep-files"] (NoArg KeepFiles)
         "do not remove temporary files",
     Option ['v'] ["verbose"]    (NoArg  Verbose)
