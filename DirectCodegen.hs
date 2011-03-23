@@ -70,24 +70,8 @@ splitExt name =
             where
             (restBase, restExt) = splitExt rest
 
-output :: [Flag] -> FilePath -> String -> [Token] -> IO ()
-output flags compiler name toks = do
-
-    (outName, outDir, outBase) <- case [f | Output f <- flags] of
-        [] -> if not (null ext) && last ext == 'c'
-                 then return (dir++base++init ext,  dir, base)
-                 else
-                    if ext == ".hs"
-                       then return (dir++base++"_out.hs", dir, base)
-                       else return (dir++base++".hs",     dir, base)
-              where
-               (dir,  file) = splitName name
-               (base, ext)  = splitExt  file
-        [f] -> let
-            (dir,  file) = splitName f
-            (base, _)    = splitExt file
-            in return (f, dir, base)
-        _ -> onlyOne "output file"
+output :: [Flag] -> FilePath -> FilePath -> FilePath -> FilePath -> String -> [Token] -> IO ()
+output flags compiler outName outDir outBase name toks = do
 
     let cProgName    = outDir++outBase++"_hsc_make.c"
         oProgName    = outDir++outBase++"_hsc_make.o"

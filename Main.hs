@@ -14,7 +14,7 @@
 #include "../../includes/ghcconfig.h"
 #endif
 
-import Control.Monad            ( liftM )
+import Control.Monad            ( liftM, forM_ )
 import Data.List                ( isSuffixOf )
 import System.Console.GetOpt
 
@@ -184,13 +184,25 @@ processFiles flags files usage = do
                       Just path -> return path
         cs  -> return (last cs)
 
-    mapM_ (processFile flags_w_tpl compiler) files
-
-processFile :: [Flag] -> FilePath -> String -> IO ()
-processFile flags compiler name
-  = do let file_name = dosifyPath name
-       toks <- parseFile file_name
-       output flags compiler file_name toks
+    forM_ files (\name -> do
+        (outName, outDir, outBase) <- case [f | Output f <- flags_w_tpl] of
+             [] -> if not (null ext) && last ext == 'c'
+                      then return (dir++base++init ext,  dir, base)
+                      else
+                         if ext == ".hs"
+                            then return (dir++base++"_out.hs", dir, base)
+                            else return (dir++base++".hs",     dir, base)
+                   where
+                    (dir,  file) = splitName name
+                    (base, ext)  = splitExt  file
+             [f] -> let
+                 (dir,  file) = splitName f
+                 (base, _)    = splitExt file
+                 in return (f, dir, base)
+             _ -> onlyOne "output file"
+        let file_name = dosifyPath name
+        toks <- parseFile file_name
+        output flags_w_tpl compiler outName outDir outBase file_name toks)
 
 parseFile :: String -> IO [Token]
 parseFile name
