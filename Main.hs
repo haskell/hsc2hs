@@ -37,6 +37,7 @@ import Paths_hsc2hs as Main     ( getDataFileName, version )
 import Common
 import CrossCodegen
 import DirectCodegen
+import Flags
 import HSCParser
 
 #ifdef BUILD_NHC
@@ -49,71 +50,21 @@ showVersion = id
 versionString :: String
 versionString = "hsc2hs version " ++ showVersion version ++ "\n"
 
-template_flag :: Flag -> Bool
-template_flag (Template _) = True
-template_flag _		   = False
-
-include :: String -> Flag
-include s@('\"':_) = Include s
-include s@('<' :_) = Include s
-include s          = Include ("\""++s++"\"")
-
-define :: String -> Flag
-define s = case break (== '=') s of
-    (name, [])      -> Define name Nothing
-    (name, _:value) -> Define name (Just value)
-
-options :: [OptDescr Flag]
-options = [
-    Option ['o'] ["output"]     (ReqArg Output     "FILE")
-        "name of main output file",
-    Option ['t'] ["template"]   (ReqArg Template   "FILE")
-        "template file",
-    Option ['c'] ["cc"]         (ReqArg Compiler   "PROG")
-        "C compiler to use",
-    Option ['l'] ["ld"]         (ReqArg Linker     "PROG")
-        "linker to use",
-    Option ['C'] ["cflag"]      (ReqArg CompFlag   "FLAG")
-        "flag to pass to the C compiler",
-    Option ['I'] []             (ReqArg (CompFlag . ("-I"++)) "DIR")
-        "passed to the C compiler",
-    Option ['L'] ["lflag"]      (ReqArg LinkFlag   "FLAG")
-        "flag to pass to the linker",
-    Option ['i'] ["include"]    (ReqArg include    "FILE")
-        "as if placed in the source",
-    Option ['D'] ["define"]     (ReqArg define "NAME[=VALUE]")
-        "as if placed in the source",
-    Option []    ["no-compile"] (NoArg  NoCompile)
-        "stop after writing *_hsc_make.c",
-    Option ['x'] ["cross-compile"] (NoArg CrossCompile)
-        "activate cross-compilation mode",
-    Option [] ["cross-safe"] (NoArg CrossSafe)
-        "restrict .hsc directives to those supported by --cross-compile",
-    Option ['k'] ["keep-files"] (NoArg KeepFiles)
-        "do not remove temporary files",
-    Option ['v'] ["verbose"]    (NoArg  Verbose)
-        "dump commands to stderr",
-    Option ['?'] ["help"]       (NoArg  Help)
-        "display this help and exit",
-    Option ['V'] ["version"]    (NoArg  Version)
-        "output version information and exit" ]
-
 main :: IO ()
 main = do
     prog <- getProgramName
     let header = "Usage: "++prog++" [OPTIONS] INPUT.hsc [...]\n"
         usage = usageInfo header options
     args <- getArgs
-    let (flags, files, errs) = getOpt Permute options args
-    case (files, errs) of
-        (_, _)
-            | any isHelp    flags -> bye usage
-            | any isVersion flags -> bye versionString
-            where
-            isHelp    Help    = True; isHelp    _ = False
-            isVersion Version = True; isVersion _ = False
-        ((_:_), []) -> processFiles flags files usage
-        (_,     _ ) -> die (concat errs ++ usage)
+    let (fs, files, errs) = getOpt Permute options args
+    let mode = foldl (.) id fs emptyMode
+    case mode of
+        Help     -> bye usage
+        Version  -> bye versionString
+        UseConfig config ->
+            case (files, errs) of
+            ((_:_), []) -> processFiles config files usage
+            (_,     _ ) -> die (concat errs ++ usage)
 
 getProgramName :: IO String
 getProgramName = liftM (`withoutSuffix` "-bin") getProgName
@@ -124,17 +75,16 @@ getProgramName = liftM (`withoutSuffix` "-bin") getProgName
 bye :: String -> IO a
 bye s = putStr s >> exitWith ExitSuccess
 
-processFiles :: [Flag] -> [FilePath] -> String -> IO ()
-processFiles flags files usage = do
+processFiles :: Config -> [FilePath] -> String -> IO ()
+processFiles config0 files usage = do
     mb_libdir <- getLibDir
 
     -- If there's no template specified on the commandline, try to locate it
-    flags_w_tpl <- case filter template_flag flags of
-        [_] -> return flags
-        (_:_) -> -- take only the last --template flag on the cmd line
-                 let (before,tpl:after) = break template_flag (reverse flags)
-                 in return $ reverse (before ++ tpl : filter (not.template_flag) after)
-        [] -> do -- If there is no Template flag explicitly specified, try
+    config1 <- case cTemplate config0 of
+               Just _ ->
+                   return config0
+               Nothing -> do
+                 -- If there is no Template flag explicitly specified, try
                  -- to find one. We first look near the executable.  This only
                  -- works on Win32 or Hugs (getExecDir). If this finds a template
                  -- file then it's certainly the one we want, even if hsc2hs isn't
@@ -160,49 +110,53 @@ processFiles flags files usage = do
                          incl = path ++ "/include/"
                      exists1 <- doesFileExist templ1
                      if exists1
-                        then return $ Just (Template templ1,
-                                            CompFlag ("-I" ++ incl))
+                        then return $ Just (templ1, CompFlag ("-I" ++ incl))
                         else return Nothing
                  case mb_templ1 of
-                     Just (templ1, incl) -> return (templ1 : flags ++ [incl])
+                     Just (templ1, incl) ->
+                         return $ config0 {
+                                      cTemplate = Just templ1,
+                                      cFlags = cFlags config0 ++ [incl]
+                                  }
                      Nothing -> do
                          templ2 <- getDataFileName "template-hsc.h"
                          exists2 <- doesFileExist templ2
-                         if exists2 then return (Template templ2 : flags)
+                         if exists2 then return $ config0 {
+                                                      cTemplate = Just templ2
+                                                  }
                                     else die ("No template specified, and template-hsc.h not located.\n\n" ++ usage)
 
-    compiler <- case [c | Compiler c <- flags_w_tpl] of
-        []  -> do
-                  -- if this hsc2hs is part of a GHC installation on
-                  -- Windows, then we should use the mingw gcc that
-                  -- comes with GHC (#3929)
-                  case mb_libdir of
-                    Nothing -> search_path   
-                    Just d  -> do
-                      let inplace_gcc = d ++ "/../mingw/bin/gcc.exe"
-                      b <- doesFileExist inplace_gcc
-                      if b then return inplace_gcc else search_path
-            where
-                search_path = do
-                  mb_path <- findExecutable default_compiler
-                  case mb_path of
-                      Nothing -> die ("Can't find "++default_compiler++"\n")
-                      Just path -> return path
-        cs  -> return (last cs)
+    config2 <- case cCompiler config1 of
+               Just _ -> return config1
+               Nothing ->
+                   do let search_path = do
+                              mb_path <- findExecutable default_compiler
+                              case mb_path of
+                                  Nothing ->
+                                      die ("Can't find "++default_compiler++"\n")
+                                  Just path -> return path
+                      -- if this hsc2hs is part of a GHC installation on
+                      -- Windows, then we should use the mingw gcc that
+                      -- comes with GHC (#3929)
+                      p <- case mb_libdir of
+                           Nothing -> search_path
+                           Just d  ->
+                               do let inplaceGcc = d ++ "/../mingw/bin/gcc.exe"
+                                  b <- doesFileExist inplaceGcc
+                                  if b then return inplaceGcc
+                                       else search_path
+                      return $ config1 {
+                                   cCompiler = Just p
+                               }
 
-    let crossCompiling = not $ null [() | CrossCompile <- flags_w_tpl]
-        beVerbose    = not $ null [() | Verbose <- flags_w_tpl]
-        keepFiles = not $ null [() | KeepFiles <- flags_w_tpl]
+    let config3 = case cLinker config2 of
+                  Nothing -> config2 { cLinker = cCompiler config2 }
+                  Just _ -> config2
 
-    outputter <- if crossCompiling
-          then return (outputCross beVerbose keepFiles compiler flags_w_tpl)
-          else do linker <- case [l | Linker l <- flags_w_tpl] of
-                      []  -> return compiler
-                      ls  -> return (last ls)
-                  return (outputDirect flags_w_tpl beVerbose keepFiles compiler linker)
+    let outputter = if cCrossCompile config3 then outputCross else outputDirect
 
     forM_ files (\name -> do
-        (outName, outDir, outBase) <- case [f | Output f <- flags_w_tpl] of
+        (outName, outDir, outBase) <- case [f | Output f <- cFlags config3] of
              [] -> if not (null ext) && last ext == 'c'
                       then return (dir++base++init ext,  dir, base)
                       else
@@ -219,7 +173,7 @@ processFiles flags files usage = do
              _ -> onlyOne "output file"
         let file_name = dosifyPath name
         toks <- parseFile file_name
-        outputter outName outDir outBase file_name toks)
+        outputter config3 outName outDir outBase file_name toks)
 
 parseFile :: String -> IO [Token]
 parseFile name

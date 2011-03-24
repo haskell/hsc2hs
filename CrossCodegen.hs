@@ -28,7 +28,7 @@ import Data.Char (toLower,toUpper,isSpace)
 import Control.Exception (assert, onException)
 import Control.Monad (when,liftM,forM)
 import Data.Foldable (concatMap)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, fromJust)
 import qualified Data.Sequence as S
 import Data.Sequence ((|>),ViewL(..))
 
@@ -39,6 +39,7 @@ import System.Exit              ( ExitCode(..) )
 
 import C
 import Common
+import Flags
 import HSCParser
 
 -- A monad over IO for performing tests; keeps the commandline flags
@@ -60,6 +61,7 @@ data TestMonadEnv = TestMonadEnv {
     testKeepFiles_ :: Bool,
     testGetBaseName_ :: FilePath,
     testGetFlags_ :: [Flag],
+    testGetConfig_ :: Config,
     testGetCompiler_ :: FilePath
 }
 
@@ -77,6 +79,9 @@ testKeepFiles = testKeepFiles_ `fmap` testAsk
 
 testGetFlags :: TestMonad [Flag]
 testGetFlags = testGetFlags_ `fmap` testAsk
+
+testGetConfig :: TestMonad Config
+testGetConfig = testGetConfig_ `fmap` testAsk
 
 testGetBaseName :: TestMonad FilePath
 testGetBaseName = testGetBaseName_ `fmap` testAsk
@@ -251,8 +256,10 @@ outputText output (SourcePos file line) txt =
 -- that autoconf went with.
 checkValidity :: [Token] -> TestMonad ()
 checkValidity input = do
+    config <- testGetConfig
     flags <- testGetFlags
-    let test = concatMap outFlagHeaderCProg flags ++
+    let test = outTemplateHeaderCProg (fromJust $ cTemplate config) ++
+               concatMap outFlagHeaderCProg flags ++
                concatMap (uncurry outValidityCheck) (zip input [0..])
     testLog ("checking for compilation errors") $ do
         success <- makeTest2 (".c",".o") $ \(cFile,oFile) -> do
@@ -479,8 +486,10 @@ outHeaderCProg' _ = ""
 -- and seeing if the compile fails.
 checkConditional :: ZCursor Token -> TestMonad Bool
 checkConditional (ZCursor s@(Special pos key value) above below) = do
+    config <- testGetConfig
     flags <- testGetFlags
-    let test = (concatMap outFlagHeaderCProg flags) ++
+    let test = outTemplateHeaderCProg (fromJust $ cTemplate config) ++
+               (concatMap outFlagHeaderCProg flags) ++
                (concatMap outHeaderCProg' above) ++
                outHeaderCProg' s ++ "#error T\n" ++
                (concatMap outHeaderCProg' below)
@@ -516,8 +525,10 @@ compareConst _ _ = error "compareConst argument isn't a Special"
 -- will generate an error if the array has negative size.
 runCompileBooleanTest :: ZCursor Token -> String -> TestMonad Bool
 runCompileBooleanTest (ZCursor s above below) booleanTest = do
+    config <- testGetConfig
     flags <- testGetFlags
     let test = -- all the surrounding code
+               outTemplateHeaderCProg (fromJust $ cTemplate config) ++
                (concatMap outFlagHeaderCProg flags) ++
                (concatMap outHeaderCProg' above) ++
                outHeaderCProg' s ++
@@ -556,15 +567,15 @@ runCompiler prog args stdoutFile = do
                  ExitFailure _ -> False
 
 -- The main driver for cross-compilation mode
-outputCross :: Bool -> Bool -> FilePath -> [Flag] -> String -> String -> String -> String -> [Token] -> IO ()
-outputCross beVerbose keepFiles compiler flags outName outDir outBase inName toks =
+outputCross :: Config -> String -> String -> String -> String -> [Token] -> IO ()
+outputCross config outName outDir outBase inName toks =
     runTestMonad $ do
         file <- liftTestIO $ openFile outName WriteMode
         (diagnose inName (liftTestIO . hPutStr file) toks
            `testFinally` (liftTestIO $ hClose file))
            `testOnException` (liftTestIO $ removeFile outName) -- cleanup on errors
     where
-    env = TestMonadEnv beVerbose 0 keepFiles (outDir++outBase++"_hsc_test") flags compiler
+    env = TestMonadEnv (cVerbose config) 0 (cKeepFiles config) (outDir++outBase++"_hsc_test") (cFlags config) config (fromJust (cCompiler config))
     runTestMonad x = runTest x env 0 >>= (handleError . fst)
 
     handleError (Left e) = die (e++"\n")

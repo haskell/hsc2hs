@@ -19,23 +19,6 @@ import System.Cmd               ( system )
 import System.Exit              ( ExitCode(..), exitWith )
 import System.Directory         ( removeFile )
 
-data Flag
-    = Help
-    | Version
-    | Template  String
-    | Compiler  String
-    | Linker    String
-    | CompFlag  String
-    | LinkFlag  String
-    | NoCompile
-    | CrossCompile
-    | CrossSafe
-    | Include   String
-    | Define    String (Maybe String)
-    | Output    String
-    | KeepFiles
-    | Verbose
-
 die :: String -> IO a
 die s = hPutStr stderr s >> exitWith (ExitFailure 1)
 

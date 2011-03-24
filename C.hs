@@ -11,9 +11,12 @@ import Data.List                ( intersperse )
 import HSCParser                ( SourcePos(..), Token(..) )
 
 import Common
+import Flags
+
+outTemplateHeaderCProg :: FilePath -> String
+outTemplateHeaderCProg template = "#include \"" ++ template ++ "\"\n"
 
 outFlagHeaderCProg :: Flag -> String
-outFlagHeaderCProg (Template t)          = "#include \""++t++"\"\n"
 outFlagHeaderCProg (Include  f)          = "#include "++f++"\n"
 outFlagHeaderCProg (Define   n Nothing)  = "#define "++n++" 1\n"
 outFlagHeaderCProg (Define   n (Just v)) = "#define "++n++" "++v++"\n"

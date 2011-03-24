@@ -7,18 +7,22 @@ compiled and run; the output of that program is the .hs file.
 -}
 
 import Data.Char                ( isAlphaNum, toUpper )
+import Data.Maybe               ( fromJust )
 import Control.Monad            ( when, forM_ )
 
 import System.Exit              ( ExitCode(..), exitWith )
 
 import C
 import Common
+import Flags
 import HSCParser
 
-outputDirect :: [Flag] -> Bool -> Bool -> FilePath -> FilePath -> FilePath -> FilePath -> FilePath -> String -> [Token] -> IO ()
-outputDirect flags beVerbose keepFiles compiler linker outName outDir outBase name toks = do
+outputDirect :: Config -> FilePath -> FilePath -> FilePath -> String -> [Token] -> IO ()
+outputDirect config outName outDir outBase name toks = do
 
-    let cProgName    = outDir++outBase++"_hsc_make.c"
+    let beVerbose    = cVerbose config
+        flags        = cFlags config
+        cProgName    = outDir++outBase++"_hsc_make.c"
         oProgName    = outDir++outBase++"_hsc_make.o"
         progName     = outDir++outBase++"_hsc_make"
 #if defined(mingw32_HOST_OS) || defined(__CYGWIN32__)
@@ -38,7 +42,7 @@ outputDirect flags beVerbose keepFiles compiler linker outName outDir outBase na
 
     let needsC = any (\(_, key, _) -> key == "def") specials
         needsH = needsC
-        possiblyRemove = if keepFiles
+        possiblyRemove = if cKeepFiles config
                          then flip const
                          else finallyRemove
 
@@ -55,6 +59,7 @@ outputDirect flags beVerbose keepFiles compiler linker outName outDir outBase na
              die (file ++ ":" ++ show line ++ " directive \"" ++ key ++ "\" is not safe for cross-compilation"))
 
     writeBinaryFile cProgName $
+        outTemplateHeaderCProg (fromJust $ cTemplate config)++
         concatMap outFlagHeaderCProg flags++
         concatMap outHeaderCProg specials++
         "\nint main (int argc, char *argv [])\n{\n"++
@@ -68,7 +73,7 @@ outputDirect flags beVerbose keepFiles compiler linker outName outDir outBase na
     when (any (\x -> case x of NoCompile -> True; _ -> False) flags) $
        exitWith ExitSuccess
 
-    rawSystemL ("compiling " ++ cProgName) beVerbose compiler
+    rawSystemL ("compiling " ++ cProgName) beVerbose (fromJust $ cCompiler config)
 	(  ["-c"]
         ++ [cProgName]
         ++ ["-o", oProgName]
@@ -76,7 +81,7 @@ outputDirect flags beVerbose keepFiles compiler linker outName outDir outBase na
 	)
     possiblyRemove cProgName $ do
 
-      rawSystemL ("linking " ++ oProgName) beVerbose linker
+      rawSystemL ("linking " ++ oProgName) beVerbose (fromJust $ cLinker config)
         (  [oProgName]
         ++ ["-o", progName]
         ++ [f | LinkFlag f <- flags]
