@@ -75,88 +75,31 @@ getProgramName = liftM (`withoutSuffix` "-bin") getProgName
 bye :: String -> IO a
 bye s = putStr s >> exitWith ExitSuccess
 
-processFiles :: Config -> [FilePath] -> String -> IO ()
-processFiles config0 files usage = do
+processFiles :: ConfigM Maybe -> [FilePath] -> String -> IO ()
+processFiles configM files usage = do
     mb_libdir <- getLibDir
 
-    -- If there's no template specified on the commandline, try to locate it
-    config1 <- case cTemplate config0 of
-               Just _ ->
-                   return config0
-               Nothing -> do
-                 -- If there is no Template flag explicitly specified, try
-                 -- to find one. We first look near the executable.  This only
-                 -- works on Win32 or Hugs (getExecDir). If this finds a template
-                 -- file then it's certainly the one we want, even if hsc2hs isn't
-                 -- installed where we told Cabal it would be installed.
-                 --
-                 -- Next we try the location we told Cabal about.
-                 --
-                 -- If neither of the above work, then hopefully we're on Unix and
-                 -- there's a wrapper script which specifies an explicit template flag.
-                 mb_templ1 <-
-                   case mb_libdir of
-                   Nothing   -> return Nothing
-                   Just path -> do
-                   -- Euch, this is horrible. Unfortunately
-                   -- Paths_hsc2hs isn't too useful for a
-                   -- relocatable binary, though.
-                     let 
-#if defined(NEW_GHC_LAYOUT)
-                         templ1 = path ++ "/template-hsc.h"
-#else
-                         templ1 = path ++ "/hsc2hs-" ++ showVersion Main.version ++ "/template-hsc.h"
-#endif
-                         incl = path ++ "/include/"
-                     exists1 <- doesFileExist templ1
-                     if exists1
-                        then return $ Just (templ1, CompFlag ("-I" ++ incl))
-                        else return Nothing
-                 case mb_templ1 of
-                     Just (templ1, incl) ->
-                         return $ config0 {
-                                      cTemplate = Just templ1,
-                                      cFlags = cFlags config0 ++ [incl]
-                                  }
-                     Nothing -> do
-                         templ2 <- getDataFileName "template-hsc.h"
-                         exists2 <- doesFileExist templ2
-                         if exists2 then return $ config0 {
-                                                      cTemplate = Just templ2
-                                                  }
-                                    else die ("No template specified, and template-hsc.h not located.\n\n" ++ usage)
+    (template, extraFlags) <- findTemplate usage mb_libdir configM
+    compiler <- findCompiler mb_libdir configM
+    let linker = case cmLinker configM of
+                 Nothing -> compiler
+                 Just l -> l
+        config = Config {
+                     cmTemplate    = Id template,
+                     cmCompiler    = Id compiler,
+                     cmLinker      = Id linker,
+                     cKeepFiles    = cKeepFiles configM,
+                     cNoCompile    = cNoCompile configM,
+                     cCrossCompile = cCrossCompile configM,
+                     cCrossSafe    = cCrossSafe configM,
+                     cVerbose      = cVerbose configM,
+                     cFlags        = cFlags configM ++ extraFlags
+                 }
 
-    config2 <- case cCompiler config1 of
-               Just _ -> return config1
-               Nothing ->
-                   do let search_path = do
-                              mb_path <- findExecutable default_compiler
-                              case mb_path of
-                                  Nothing ->
-                                      die ("Can't find "++default_compiler++"\n")
-                                  Just path -> return path
-                      -- if this hsc2hs is part of a GHC installation on
-                      -- Windows, then we should use the mingw gcc that
-                      -- comes with GHC (#3929)
-                      p <- case mb_libdir of
-                           Nothing -> search_path
-                           Just d  ->
-                               do let inplaceGcc = d ++ "/../mingw/bin/gcc.exe"
-                                  b <- doesFileExist inplaceGcc
-                                  if b then return inplaceGcc
-                                       else search_path
-                      return $ config1 {
-                                   cCompiler = Just p
-                               }
-
-    let config3 = case cLinker config2 of
-                  Nothing -> config2 { cLinker = cCompiler config2 }
-                  Just _ -> config2
-
-    let outputter = if cCrossCompile config3 then outputCross else outputDirect
+    let outputter = if cCrossCompile config then outputCross else outputDirect
 
     forM_ files (\name -> do
-        (outName, outDir, outBase) <- case [f | Output f <- cFlags config3] of
+        (outName, outDir, outBase) <- case [f | Output f <- cFlags config] of
              [] -> if not (null ext) && last ext == 'c'
                       then return (dir++base++init ext,  dir, base)
                       else
@@ -173,7 +116,74 @@ processFiles config0 files usage = do
              _ -> onlyOne "output file"
         let file_name = dosifyPath name
         toks <- parseFile file_name
-        outputter config3 outName outDir outBase file_name toks)
+        outputter config outName outDir outBase file_name toks)
+
+findTemplate :: String -> Maybe FilePath -> ConfigM Maybe
+             -> IO (FilePath, [Flag])
+findTemplate usage mb_libdir config
+ = -- If there's no template specified on the commandline, try to locate it
+   case cmTemplate config of
+   Just t ->
+       return (t, [])
+   Nothing -> do
+     -- If there is no Template flag explicitly specified, try
+     -- to find one. We first look near the executable.  This only
+     -- works on Win32 or Hugs (getExecDir). If this finds a template
+     -- file then it's certainly the one we want, even if hsc2hs isn't
+     -- installed where we told Cabal it would be installed.
+     --
+     -- Next we try the location we told Cabal about.
+     --
+     -- If neither of the above work, then hopefully we're on Unix and
+     -- there's a wrapper script which specifies an explicit template flag.
+     mb_templ1 <-
+       case mb_libdir of
+       Nothing   -> return Nothing
+       Just path -> do
+       -- Euch, this is horrible. Unfortunately
+       -- Paths_hsc2hs isn't too useful for a
+       -- relocatable binary, though.
+         let
+#if defined(NEW_GHC_LAYOUT)
+             templ1 = path ++ "/template-hsc.h"
+#else
+             templ1 = path ++ "/hsc2hs-" ++ showVersion Main.version ++ "/template-hsc.h"
+#endif
+             incl = path ++ "/include/"
+         exists1 <- doesFileExist templ1
+         if exists1
+            then return $ Just (templ1, CompFlag ("-I" ++ incl))
+            else return Nothing
+     case mb_templ1 of
+         Just (templ1, incl) ->
+             return (templ1, [incl])
+         Nothing -> do
+             templ2 <- getDataFileName "template-hsc.h"
+             exists2 <- doesFileExist templ2
+             if exists2 then return (templ2, [])
+                        else die ("No template specified, and template-hsc.h not located.\n\n" ++ usage)
+
+findCompiler :: Maybe FilePath -> ConfigM Maybe -> IO FilePath
+findCompiler mb_libdir config
+ = case cmCompiler config of
+   Just c -> return c
+   Nothing ->
+       do let search_path = do
+                  mb_path <- findExecutable default_compiler
+                  case mb_path of
+                      Nothing ->
+                          die ("Can't find "++default_compiler++"\n")
+                      Just path -> return path
+          -- if this hsc2hs is part of a GHC installation on
+          -- Windows, then we should use the mingw gcc that
+          -- comes with GHC (#3929)
+          case mb_libdir of
+              Nothing -> search_path
+              Just d  ->
+                  do let inplaceGcc = d ++ "/../mingw/bin/gcc.exe"
+                     b <- doesFileExist inplaceGcc
+                     if b then return inplaceGcc
+                          else search_path
 
 parseFile :: String -> IO [Token]
 parseFile name

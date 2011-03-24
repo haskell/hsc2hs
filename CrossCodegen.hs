@@ -28,7 +28,7 @@ import Data.Char (toLower,toUpper,isSpace)
 import Control.Exception (assert, onException)
 import Control.Monad (when,liftM,forM)
 import Data.Foldable (concatMap)
-import Data.Maybe (fromMaybe, fromJust)
+import Data.Maybe (fromMaybe)
 import qualified Data.Sequence as S
 import Data.Sequence ((|>),ViewL(..))
 
@@ -258,7 +258,7 @@ checkValidity :: [Token] -> TestMonad ()
 checkValidity input = do
     config <- testGetConfig
     flags <- testGetFlags
-    let test = outTemplateHeaderCProg (fromJust $ cTemplate config) ++
+    let test = outTemplateHeaderCProg (cTemplate config) ++
                concatMap outFlagHeaderCProg flags ++
                concatMap (uncurry outValidityCheck) (zip input [0..])
     testLog ("checking for compilation errors") $ do
@@ -488,7 +488,7 @@ checkConditional :: ZCursor Token -> TestMonad Bool
 checkConditional (ZCursor s@(Special pos key value) above below) = do
     config <- testGetConfig
     flags <- testGetFlags
-    let test = outTemplateHeaderCProg (fromJust $ cTemplate config) ++
+    let test = outTemplateHeaderCProg (cTemplate config) ++
                (concatMap outFlagHeaderCProg flags) ++
                (concatMap outHeaderCProg' above) ++
                outHeaderCProg' s ++ "#error T\n" ++
@@ -528,7 +528,7 @@ runCompileBooleanTest (ZCursor s above below) booleanTest = do
     config <- testGetConfig
     flags <- testGetFlags
     let test = -- all the surrounding code
-               outTemplateHeaderCProg (fromJust $ cTemplate config) ++
+               outTemplateHeaderCProg (cTemplate config) ++
                (concatMap outFlagHeaderCProg flags) ++
                (concatMap outHeaderCProg' above) ++
                outHeaderCProg' s ++
@@ -575,7 +575,7 @@ outputCross config outName outDir outBase inName toks =
            `testFinally` (liftTestIO $ hClose file))
            `testOnException` (liftTestIO $ removeFile outName) -- cleanup on errors
     where
-    env = TestMonadEnv (cVerbose config) 0 (cKeepFiles config) (outDir++outBase++"_hsc_test") (cFlags config) config (fromJust (cCompiler config))
+    env = TestMonadEnv (cVerbose config) 0 (cKeepFiles config) (outDir++outBase++"_hsc_test") (cFlags config) config (cCompiler config)
     runTestMonad x = runTest x env 0 >>= (handleError . fst)
 
     handleError (Left e) = die (e++"\n")

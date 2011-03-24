@@ -6,31 +6,43 @@ import System.Console.GetOpt
 data Mode
     = Help
     | Version
-    | UseConfig Config
+    | UseConfig (ConfigM Maybe)
 
-data Config = Config {
-                  cTemplate :: Maybe FilePath,
-                  cCompiler :: Maybe FilePath,
-                  cLinker   :: Maybe FilePath,
-                  cKeepFiles :: Bool,
-                  cNoCompile :: Bool,
-                  cCrossCompile :: Bool,
-                  cCrossSafe :: Bool,
-                  cVerbose :: Bool,
-                  cFlags :: [Flag]
-              }
+newtype Id a = Id { fromId :: a }
+type Config = ConfigM Id
+
+data ConfigM m = Config {
+                     cmTemplate :: m FilePath,
+                     cmCompiler :: m FilePath,
+                     cmLinker   :: m FilePath,
+                     cKeepFiles :: Bool,
+                     cNoCompile :: Bool,
+                     cCrossCompile :: Bool,
+                     cCrossSafe :: Bool,
+                     cVerbose :: Bool,
+                     cFlags :: [Flag]
+                 }
+
+cTemplate :: ConfigM Id -> FilePath
+cTemplate c = fromId $ cmTemplate c
+
+cCompiler :: ConfigM Id -> FilePath
+cCompiler c = fromId $ cmCompiler c
+
+cLinker :: ConfigM Id -> FilePath
+cLinker c = fromId $ cmLinker c
 
 emptyMode :: Mode
 emptyMode = UseConfig $ Config {
-                            cTemplate = Nothing,
-                            cCompiler = Nothing,
-                            cLinker   = Nothing,
-                            cKeepFiles = False,
-                            cNoCompile = False,
+                            cmTemplate    = Nothing,
+                            cmCompiler    = Nothing,
+                            cmLinker      = Nothing,
+                            cKeepFiles    = False,
+                            cNoCompile    = False,
                             cCrossCompile = False,
-                            cCrossSafe = False,
-                            cVerbose = False,
-                            cFlags = []
+                            cCrossSafe    = False,
+                            cVerbose      = False,
+                            cFlags        = []
                         }
 
 data Flag
@@ -86,32 +98,32 @@ setMode _              Help = Help
 setMode Version        _    = Version
 setMode (UseConfig {}) _    = error "setMode: UseConfig: Can't happen"
 
-withConfig :: (Config -> Config) -> Mode -> Mode
+withConfig :: (ConfigM Maybe -> ConfigM Maybe) -> Mode -> Mode
 withConfig f (UseConfig c) = UseConfig $ f c
 withConfig _ m = m
 
-setTemplate :: FilePath -> Config -> Config
-setTemplate fp c = c { cTemplate = Just fp }
+setTemplate :: FilePath -> ConfigM Maybe -> ConfigM Maybe
+setTemplate fp c = c { cmTemplate = Just fp }
 
-setCompiler :: FilePath -> Config -> Config
-setCompiler fp c = c { cCompiler = Just fp }
+setCompiler :: FilePath -> ConfigM Maybe -> ConfigM Maybe
+setCompiler fp c = c { cmCompiler = Just fp }
 
-setLinker :: FilePath -> Config -> Config
-setLinker fp c = c { cLinker = Just fp }
+setLinker :: FilePath -> ConfigM Maybe -> ConfigM Maybe
+setLinker fp c = c { cmLinker = Just fp }
 
-setKeepFiles :: Bool -> Config -> Config
+setKeepFiles :: Bool -> ConfigM Maybe -> ConfigM Maybe
 setKeepFiles b c = c { cKeepFiles = b }
 
-setNoCompile :: Bool -> Config -> Config
+setNoCompile :: Bool -> ConfigM Maybe -> ConfigM Maybe
 setNoCompile b c = c { cNoCompile = b }
 
-setCrossCompile :: Bool -> Config -> Config
+setCrossCompile :: Bool -> ConfigM Maybe -> ConfigM Maybe
 setCrossCompile b c = c { cCrossCompile = b }
 
-setCrossSafe :: Bool -> Config -> Config
+setCrossSafe :: Bool -> ConfigM Maybe -> ConfigM Maybe
 setCrossSafe b c = c { cCrossSafe = b }
 
-setVerbose :: Bool -> Config -> Config
+setVerbose :: Bool -> ConfigM Maybe -> ConfigM Maybe
 setVerbose v c = c { cVerbose = v }
 
 include :: String -> Flag

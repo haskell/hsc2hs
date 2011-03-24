@@ -7,7 +7,6 @@ compiled and run; the output of that program is the .hs file.
 -}
 
 import Data.Char                ( isAlphaNum, toUpper )
-import Data.Maybe               ( fromJust )
 import Control.Monad            ( when, forM_ )
 
 import System.Exit              ( ExitCode(..), exitWith )
@@ -59,7 +58,7 @@ outputDirect config outName outDir outBase name toks = do
              die (file ++ ":" ++ show line ++ " directive \"" ++ key ++ "\" is not safe for cross-compilation"))
 
     writeBinaryFile cProgName $
-        outTemplateHeaderCProg (fromJust $ cTemplate config)++
+        outTemplateHeaderCProg (cTemplate config)++
         concatMap outFlagHeaderCProg flags++
         concatMap outHeaderCProg specials++
         "\nint main (int argc, char *argv [])\n{\n"++
@@ -70,7 +69,7 @@ outputDirect config outName outDir outBase name toks = do
 
     when (cNoCompile config) $ exitWith ExitSuccess
 
-    rawSystemL ("compiling " ++ cProgName) beVerbose (fromJust $ cCompiler config)
+    rawSystemL ("compiling " ++ cProgName) beVerbose (cCompiler config)
 	(  ["-c"]
         ++ [cProgName]
         ++ ["-o", oProgName]
@@ -78,7 +77,7 @@ outputDirect config outName outDir outBase name toks = do
 	)
     possiblyRemove cProgName $ do
 
-      rawSystemL ("linking " ++ oProgName) beVerbose (fromJust $ cLinker config)
+      rawSystemL ("linking " ++ oProgName) beVerbose (cLinker config)
         (  [oProgName]
         ++ ["-o", progName]
         ++ [f | LinkFlag f <- flags]
