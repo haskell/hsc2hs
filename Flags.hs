@@ -13,7 +13,9 @@ data Config = Config {
                   cCompiler :: Maybe FilePath,
                   cLinker   :: Maybe FilePath,
                   cKeepFiles :: Bool,
+                  cNoCompile :: Bool,
                   cCrossCompile :: Bool,
+                  cCrossSafe :: Bool,
                   cVerbose :: Bool,
                   cFlags :: [Flag]
               }
@@ -24,7 +26,9 @@ emptyMode = UseConfig $ Config {
                             cCompiler = Nothing,
                             cLinker   = Nothing,
                             cKeepFiles = False,
+                            cNoCompile = False,
                             cCrossCompile = False,
+                            cCrossSafe = False,
                             cVerbose = False,
                             cFlags = []
                         }
@@ -32,8 +36,6 @@ emptyMode = UseConfig $ Config {
 data Flag
     = CompFlag  String
     | LinkFlag  String
-    | NoCompile
-    | CrossSafe
     | Include   String
     | Define    String (Maybe String)
     | Output    String
@@ -59,11 +61,11 @@ options = [
         "as if placed in the source",
     Option ['D'] ["define"]     (ReqArg (addFlag . define) "NAME[=VALUE]")
         "as if placed in the source",
-    Option []    ["no-compile"] (NoArg  (addFlag NoCompile))
+    Option []    ["no-compile"] (NoArg  (withConfig $ setNoCompile True))
         "stop after writing *_hsc_make.c",
     Option ['x'] ["cross-compile"] (NoArg (withConfig $ setCrossCompile True))
         "activate cross-compilation mode",
-    Option [] ["cross-safe"] (NoArg (addFlag CrossSafe))
+    Option [] ["cross-safe"] (NoArg (withConfig $ setCrossSafe True))
         "restrict .hsc directives to those supported by --cross-compile",
     Option ['k'] ["keep-files"] (NoArg (withConfig $ setKeepFiles True))
         "do not remove temporary files",
@@ -100,8 +102,14 @@ setLinker fp c = c { cLinker = Just fp }
 setKeepFiles :: Bool -> Config -> Config
 setKeepFiles b c = c { cKeepFiles = b }
 
+setNoCompile :: Bool -> Config -> Config
+setNoCompile b c = c { cNoCompile = b }
+
 setCrossCompile :: Bool -> Config -> Config
 setCrossCompile b c = c { cCrossCompile = b }
+
+setCrossSafe :: Bool -> Config -> Config
+setCrossSafe b c = c { cCrossSafe = b }
 
 setVerbose :: Bool -> Config -> Config
 setVerbose v c = c { cVerbose = v }

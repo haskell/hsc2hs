@@ -51,7 +51,7 @@ outputDirect config outName outDir outBase name toks = do
             fixChar c | isAlphaNum c = toUpper c
                       | otherwise    = '_'
 
-    when (not $ null [() | CrossSafe <- flags]) $
+    when (cCrossSafe config) $
         forM_ specials (\ (SourcePos file line,key,_) ->
             when (not $ key `elem` ["const","offset","size","peek","poke","ptr",
                                     "type","enum","error","warning","include","define","undef",
@@ -68,10 +68,7 @@ outputDirect config outName outDir outBase name toks = do
         concatMap outTokenHs toks++
         "    return 0;\n}\n"
 
-    -- NOTE: hbc compiles "[() | NoCompile <- flags]" into wrong code,
-    -- so we use something slightly more complicated.   :-P
-    when (any (\x -> case x of NoCompile -> True; _ -> False) flags) $
-       exitWith ExitSuccess
+    when (cNoCompile config) $ exitWith ExitSuccess
 
     rawSystemL ("compiling " ++ cProgName) beVerbose (fromJust $ cCompiler config)
 	(  ["-c"]
