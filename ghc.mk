@@ -34,12 +34,6 @@ ifneq "$(BINDIST)" "YES"
 
 $(HSC2HS_INPLACE) : $(utils/hsc2hs_template)
 
-# This is a bit of a hack, but it will do. In particular, if we are
-# using integer-gmp then libgmp.a needs to exist.
-ifeq "$(HaveLibGmp)" "NO"
-$(HSC2HS_INPLACE) : $(OTHER_LIBS)
-endif
-
 # When invoked in the source tree, hsc2hs will try to link in
 # extra-libs from the packages, including libgmp.a.  So we need a
 # dependency to ensure these libs are built before we invoke hsc2hs:
