@@ -90,9 +90,6 @@ outputDirect config outName outDir outBase name toks = do
           when needsH $ writeBinaryFile outHName $
             "#ifndef "++includeGuard++"\n" ++
             "#define "++includeGuard++"\n" ++
-            "#if __GLASGOW_HASKELL__ && __GLASGOW_HASKELL__ < 409\n" ++
-            "#include <Rts.h>\n" ++
-            "#endif\n" ++
             "#include <HsFFI.h>\n" ++
             "#if __NHC__\n" ++
             "#undef HsChar\n" ++

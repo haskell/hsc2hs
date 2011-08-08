@@ -45,22 +45,14 @@ outHeaderCProg (pos, key, arg) = case key of
 
 outHeaderHs :: [Flag] -> Maybe String -> [(SourcePos, String, String)] -> String
 outHeaderHs flags inH toks =
-    "#if " ++
-    "__GLASGOW_HASKELL__ && __GLASGOW_HASKELL__ < 409\n" ++
-    "    printf (\"{-# OPTIONS -optc-D" ++
-    "__GLASGOW_HASKELL__=%d #-}\\n\", " ++
-    "__GLASGOW_HASKELL__);\n" ++
-    "#endif\n"++
     case inH of
         Nothing -> concatMap outFlag flags++concatMap outSpecial toks
-        Just f  -> outInclude ("\""++f++"\"")
+        Just _  -> ""
     where
-    outFlag (Include f)          = outInclude f
     outFlag (Define  n Nothing)  = outOption ("-optc-D"++n)
     outFlag (Define  n (Just v)) = outOption ("-optc-D"++n++"="++v)
     outFlag _                    = ""
     outSpecial (pos, key, arg) = case key of
-        "include"                  -> outInclude arg
         "define" | goodForOptD arg -> outOption ("-optc-D"++toOptD arg)
                  | otherwise       -> ""
         _ | conditional key        -> outCLine pos++"#"++key++" "++arg++"\n"
@@ -74,21 +66,8 @@ outHeaderHs flags inH toks =
         (name, "")      -> name
         (name, _:value) -> name++'=':dropWhile isSpace value
     outOption s =
-	"#if __GLASGOW_HASKELL__ && __GLASGOW_HASKELL__ < 603\n" ++
-	"    printf (\"{-# OPTIONS %s #-}\\n\", \""++
-                  showCString s++"\");\n"++
-	"#else\n"++
 	"    printf (\"{-# OPTIONS_GHC %s #-}\\n\", \""++
-                  showCString s++"\");\n"++
-	"#endif\n"
-    outInclude s =
-	"#if __GLASGOW_HASKELL__ && __GLASGOW_HASKELL__ < 603\n" ++
-	"    printf (\"{-# OPTIONS -#include %s #-}\\n\", \""++
-                  showCString s++"\");\n"++
-	"#elif __GLASGOW_HASKELL__ < 610\n"++
-	"    printf (\"{-# INCLUDE %s #-}\\n\", \""++
-                  showCString s++"\");\n"++
-	"#endif\n"
+                  showCString s++"\");\n"
 
 outTokenHs :: Token -> String
 outTokenHs (Text pos txt) =

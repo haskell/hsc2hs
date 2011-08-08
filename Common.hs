@@ -6,15 +6,9 @@ import qualified Control.Exception as Exception
 import Control.Monad            ( when )
 import System.IO
 
-#if __GLASGOW_HASKELL__ >= 604
 import System.Process           ( runProcess, waitForProcess )
-#define HAVE_runProcess
-#endif
 
 import System.Cmd               ( rawSystem )
-#ifndef HAVE_runProcess
-import System.Cmd               ( system )
-#endif
 
 import System.Exit              ( ExitCode(..), exitWith )
 import System.Directory         ( removeFile )
@@ -64,14 +58,10 @@ rawSystemWithStdOutL :: String -> Bool -> FilePath -> [String] -> FilePath -> IO
 rawSystemWithStdOutL action flg prog args outFile = do
   let cmdLine = prog++" "++unwords args++" >"++outFile
   when flg (hPutStrLn stderr ("Executing: " ++ cmdLine))
-#ifndef HAVE_runProcess
-  exitStatus <- system cmdLine
-#else
   hOut <- openFile outFile WriteMode
   process <- runProcess prog args Nothing Nothing Nothing (Just hOut) Nothing
   exitStatus <- waitForProcess process
   hClose hOut
-#endif
   case exitStatus of
     ExitFailure exitCode -> die $ action ++ " failed "
                                ++ "(exit code " ++ show exitCode ++ ")\n"

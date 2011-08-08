@@ -1,6 +1,3 @@
-#if __GLASGOW_HASKELL__ && __GLASGOW_HASKELL__ < 409
-#include <Rts.h>
-#endif
 #include <HsFFI.h>
 
 #include <stddef.h>
