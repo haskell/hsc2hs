@@ -1,4 +1,3 @@
-#include <HsFFI.h>
 
 #include <stddef.h>
 #include <string.h>
