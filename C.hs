@@ -38,7 +38,7 @@ outHeaderCProg (pos, key, arg) = case key of
             (name, args) ->
                 outCLine pos++
                 "#define hsc_"++name++"("++dropWhile isSpace args++") " ++
-                "printf ("++joinLines body++");\n"
+                "hsc_printf ("++joinLines body++");\n"
     _ -> ""
    where
     joinLines = concat . intersperse " \\\n" . lines
@@ -66,7 +66,7 @@ outHeaderHs flags inH toks =
         (name, "")      -> name
         (name, _:value) -> name++'=':dropWhile isSpace value
     outOption s =
-	"    printf (\"{-# OPTIONS_GHC %s #-}\\n\", \""++
+        "    hsc_printf (\"{-# OPTIONS_GHC %s #-}\\n\", \""++
                   showCString s++"\");\n"
 
 outTokenHs :: Token -> String
@@ -78,7 +78,7 @@ outTokenHs (Text pos txt) =
             outHsLine pos++
             outText rest
     where
-    outText s = "    fputs (\""++showCString s++"\", stdout);\n"
+    outText s = "    hsc_fputs (\""++showCString s++"\", hsc_stdout());\n"
 outTokenHs (Special pos key arg) =
     case key of
         "include"           -> ""
@@ -117,7 +117,7 @@ outEnum arg = case parseEnum arg of
                     cName++");\n"
                Just hsName ->
                     "    hsc_enum ("++t++", "++f++", " ++
-                    "printf (\"%s\", \""++hsName++"\"), "++
+                    "hsc_printf (\"%s\", \""++hsName++"\"), "++
                     cName++");\n"
 
 outFlagH :: Flag -> String

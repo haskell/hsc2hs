@@ -23,28 +23,21 @@ Data-Files: template-hsc.h
 build-type: Simple
 cabal-version: >=1.2
 
-Flag base4
-    Description: Choose the even newer, even smaller, split-up base package.
-
-Flag base3
-    Description: Choose the new smaller, split-up base package.
-
 Executable hsc2hs
     Main-Is: Main.hs
-    Other-Modules: HSCParser, DirectCodegen, CrossCodegen, Common, C, Flags
+    Other-Modules: HSCParser,
+                   DirectCodegen,
+                   CrossCodegen,
+                   UtilsCodegen,
+                   Common,
+                   C,
+                   Flags
     -- needed for ReadP (used by Data.Version)
     Hugs-Options: -98
     Extensions: CPP, ForeignFunctionInterface
 
-    if flag(base4)
-        Build-Depends: base       >= 4   && < 5
-    if flag(base3)
-        Build-Depends: base       >= 3   && < 4
-    if !flag(base3) && !flag(base4)
-        Build-Depends: base       < 3
-
-    if flag(base3) || flag(base4)
-        Build-Depends: directory  >= 1   && < 1.2,
-                       process    >= 1   && < 1.2
-    Build-Depends: containers >= 0.2 && < 0.5
+    Build-Depends: base       >= 4   && < 5,
+                   containers >= 0.2 && < 0.5,
+                   directory  >= 1   && < 1.2,
+                   process    >= 1   && < 1.2
 

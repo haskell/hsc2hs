@@ -15,6 +15,7 @@ import C
 import Common
 import Flags
 import HSCParser
+import UtilsCodegen
 
 outputDirect :: Config -> FilePath -> FilePath -> FilePath -> String -> [Token] -> IO ()
 outputDirect config outName outDir outBase name toks = do
@@ -70,18 +71,19 @@ outputDirect config outName outDir outBase name toks = do
     when (cNoCompile config) $ exitWith ExitSuccess
 
     rawSystemL ("compiling " ++ cProgName) beVerbose (cCompiler config)
-	(  ["-c"]
+        (  ["-c"]
         ++ [cProgName]
         ++ ["-o", oProgName]
         ++ [f | CompFlag f <- flags]
-	)
-    possiblyRemove cProgName $ do
+        )
+    possiblyRemove cProgName $
+        withUtilsObject config outDir outBase $ \oUtilsName -> do
 
       rawSystemL ("linking " ++ oProgName) beVerbose (cLinker config)
-        (  [oProgName]
+        (  [oProgName, oUtilsName]
         ++ ["-o", progName]
         ++ [f | LinkFlag f <- flags]
-	)
+        )
       possiblyRemove oProgName $ do
 
         rawSystemWithStdOutL ("running " ++ execProgName) beVerbose execProgName [] outName

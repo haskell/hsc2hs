@@ -31,11 +31,8 @@ import Data.Foldable (concatMap)
 import Data.Maybe (fromMaybe)
 import qualified Data.Sequence as S
 import Data.Sequence ((|>),ViewL(..))
-
-#ifndef HAVE_runProcess
-import System.Cmd               ( system )
-#endif
 import System.Exit              ( ExitCode(..) )
+import System.Process
 
 import C
 import Common
@@ -551,17 +548,22 @@ runCompileTest testStr = do
                   (Just stdout)
 
 runCompiler :: FilePath -> [String] -> Maybe FilePath -> TestMonad Bool
-runCompiler prog args stdoutFile = do
-  let cmdLine = prog++" "++unwords args++(maybe "" (\f -> " >&"++f) stdoutFile)
-  testLog ("executing: " ++ cmdLine) $ liftTestIO $ do
-#ifndef HAVE_runProcess
-      exitStatus <- system cmdLine
+runCompiler prog args mStdoutFile = do
+  let cmdLine =
+#if MIN_VERSION_process(1,1,0)
+            showCommandForUser prog args
 #else
-      hOut <- maybe (return Nothing) (fmap Just . openFile stdoutFile WriteMode) stdoutFile
-      process <- runProcess prog args Nothing Nothing Nothing hOut hOut
-      maybe (return ()) hClose hOut
-      exitStatus <- waitForProcess process
+            unwords (prog : args)
 #endif
+  testLog ("executing: " ++ cmdLine) $ liftTestIO $ do
+      mHOut <- case mStdoutFile of
+               Nothing -> return Nothing
+               Just stdoutFile -> liftM Just $ openFile stdoutFile WriteMode
+      process <- runProcess prog args Nothing Nothing Nothing mHOut mHOut
+      case mHOut of
+          Just hOut -> hClose hOut
+          Nothing -> return ()
+      exitStatus <- waitForProcess process
       return $ case exitStatus of
                  ExitSuccess -> True
                  ExitFailure _ -> False
@@ -575,8 +577,8 @@ outputCross config outName outDir outBase inName toks =
            `testFinally` (liftTestIO $ hClose file))
            `testOnException` (liftTestIO $ removeFile outName) -- cleanup on errors
     where
-    env = TestMonadEnv (cVerbose config) 0 (cKeepFiles config) (outDir++outBase++"_hsc_test") (cFlags config) config (cCompiler config)
-    runTestMonad x = runTest x env 0 >>= (handleError . fst)
+    tmenv = TestMonadEnv (cVerbose config) 0 (cKeepFiles config) (outDir++outBase++"_hsc_test") (cFlags config) config (cCompiler config)
+    runTestMonad x = runTest x tmenv 0 >>= (handleError . fst)
 
     handleError (Left e) = die (e++"\n")
     handleError (Right ()) = return ()

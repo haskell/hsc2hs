@@ -1,9 +1,19 @@
 
+/* We need stddef to be able to use size_t. Hopefully this won't cause
+   any problems along the lines of ghc trac #2897. */
 #include <stddef.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <ctype.h>
+
+/* hsc_* are defined in the generated utils.c */
+int hsc_printf(const char *format, ...);
+int hsc_toupper(int c);
+int hsc_tolower(int c);
+int hsc_putchar(int c);
+/* "void" should really be "FILE", but we aren't able to refer to "FILE"
+   as we don't want to include <stdio.h> here */
+int hsc_fputs(const char *s, void *stream);
+/* "void" should really be "FILE", but we aren't able to refer to "FILE"
+   as we don't want to include <stdio.h> here */
+void *hsc_stdout(void);
 
 /* For the single-argument macros we make the macros variadic (the
    argument is x... rather than simply x) so that arguments containing
@@ -15,72 +25,75 @@
 
 #if __NHC__
 #define hsc_line(line, file) \
-    printf ("# %d \"%s\"\n", line, file);
+    hsc_printf ("# %d \"%s\"\n", line, file);
 #else
 #define hsc_line(line, file) \
-    printf ("{-# LINE %d \"%s\" #-}\n", line, file);
+    hsc_printf ("{-# LINE %d \"%s\" #-}\n", line, file);
 #endif
 
 #define hsc_const(x...)                     \
     if ((x) < 0)                            \
-        printf ("%ld", (long)(x));          \
+        hsc_printf ("%ld", (long)(x));      \
     else                                    \
-        printf ("%lu", (unsigned long)(x));
+        hsc_printf ("%lu", (unsigned long)(x));
 
 #define hsc_const_str(x...)                                       \
     {                                                             \
         const char *s = (x);                                      \
-        printf ("\"");                                            \
+        hsc_printf ("\"");                                        \
         while (*s != '\0')                                        \
         {                                                         \
             if (*s == '"' || *s == '\\')                          \
-                printf ("\\%c", *s);                              \
+                hsc_printf ("\\%c", *s);                          \
             else if (*s >= 0x20 && *s <= 0x7E)                    \
-                printf ("%c", *s);                                \
+                hsc_printf ("%c", *s);                            \
             else                                                  \
-                printf ("\\%d%s",                                 \
+                hsc_printf ("\\%d%s",                             \
                         (unsigned char) *s,                       \
                         s[1] >= '0' && s[1] <= '9' ? "\\&" : ""); \
             ++s;                                                  \
         }                                                         \
-        printf ("\"");                                            \
+        hsc_printf ("\"");                                        \
     }
 
 #define hsc_type(t...)                                      \
     if ((t)(int)(t)1.4 == (t)1.4)                           \
-        printf ("%s%lu",                                    \
+        hsc_printf ("%s%lu",                                \
                 (t)(-1) < (t)0 ? "Int" : "Word",            \
                 (unsigned long)sizeof (t) * 8);             \
     else                                                    \
-        printf ("%s",                                       \
+        hsc_printf ("%s",                                   \
                 sizeof (t) >  sizeof (double) ? "LDouble" : \
                 sizeof (t) == sizeof (double) ? "Double"  : \
                 "Float");
 
 #define hsc_peek(t, f) \
-    printf ("(\\hsc_ptr -> peekByteOff hsc_ptr %ld)", (long) offsetof (t, f));
+    hsc_printf ("(\\hsc_ptr -> peekByteOff hsc_ptr %ld)", \
+                (long) offsetof (t, f));
 
 #define hsc_poke(t, f) \
-    printf ("(\\hsc_ptr -> pokeByteOff hsc_ptr %ld)", (long) offsetof (t, f));
+    hsc_printf ("(\\hsc_ptr -> pokeByteOff hsc_ptr %ld)", \
+                (long) offsetof (t, f));
 
 #define hsc_ptr(t, f) \
-    printf ("(\\hsc_ptr -> hsc_ptr `plusPtr` %ld)", (long) offsetof (t, f));
+    hsc_printf ("(\\hsc_ptr -> hsc_ptr `plusPtr` %ld)", \
+                (long) offsetof (t, f));
 
 #define hsc_offset(t, f) \
-    printf("(%ld)", (long) offsetof (t, f));
+    hsc_printf("(%ld)", (long) offsetof (t, f));
 
 #define hsc_size(t...) \
-    printf("(%ld)", (long) sizeof(t));
+    hsc_printf("(%ld)", (long) sizeof(t));
 
 #define hsc_enum(t, f, print_name, x)         \
     print_name;                               \
-    printf (" :: %s\n", #t);                  \
+    hsc_printf (" :: %s\n", #t);                  \
     print_name;                               \
-    printf (" = %s ", #f);                    \
+    hsc_printf (" = %s ", #f);                    \
     if ((x) < 0)                              \
-        printf ("(%ld)\n", (long)(x));        \
+        hsc_printf ("(%ld)\n", (long)(x));        \
     else                                      \
-        printf ("%lu\n", (unsigned long)(x));
+        hsc_printf ("%lu\n", (unsigned long)(x));
 
 #define hsc_haskellize(x...)                                       \
     {                                                              \
@@ -88,7 +101,7 @@
         int upper = 0;                                             \
         if (*s != '\0')                                            \
         {                                                          \
-            putchar (tolower (*s));                                \
+            hsc_putchar (hsc_tolower (*s));                        \
             ++s;                                                   \
             while (*s != '\0')                                     \
             {                                                      \
@@ -96,7 +109,8 @@
                     upper = 1;                                     \
                 else                                               \
                 {                                                  \
-                    putchar (upper ? toupper (*s) : tolower (*s)); \
+                    hsc_putchar (upper ? hsc_toupper (*s)          \
+                                       : hsc_tolower (*s));        \
                     upper = 0;                                     \
                 }                                                  \
                 ++s;                                               \

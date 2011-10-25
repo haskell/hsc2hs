@@ -144,11 +144,7 @@ findTemplate usage mb_libdir config
        -- Paths_hsc2hs isn't too useful for a
        -- relocatable binary, though.
          let
-#if defined(NEW_GHC_LAYOUT)
              templ1 = path ++ "/template-hsc.h"
-#else
-             templ1 = path ++ "/hsc2hs-" ++ showVersion Main.version ++ "/template-hsc.h"
-#endif
              incl = path ++ "/include/"
          exists1 <- doesFileExist templ1
          if exists1
@@ -202,11 +198,7 @@ parseFile name
            die (name'++":"++show line++": "++msg++"\n")
 
 getLibDir :: IO (Maybe String)
-#if defined(NEW_GHC_LAYOUT)
 getLibDir = fmap (fmap (++ "/lib")) $ getExecDir "/bin/hsc2hs.exe"
-#else
-getLibDir = getExecDir "/bin/hsc2hs.exe"
-#endif
 
 -- (getExecDir cmd) returns the directory in which the current
 --                  executable, which should be called 'cmd', is running
