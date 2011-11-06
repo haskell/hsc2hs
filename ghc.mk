@@ -18,9 +18,6 @@ $(eval $(call build-prog,utils/hsc2hs,dist-install,1))
 utils/hsc2hs_dist_MODULES += Paths_hsc2hs
 utils/hsc2hs_dist-install_MODULES = $(utils/hsc2hs_dist_MODULES)
 
-utils/hsc2hs_dist_HC_OPTS         += -DNEW_GHC_LAYOUT
-utils/hsc2hs_dist-install_HC_OPTS += -DNEW_GHC_LAYOUT
-
 utils/hsc2hs_template=$(INPLACE_TOPDIR)/template-hsc.h
 
 define utils/hsc2hs_dist_SHELL_WRAPPER_EXTRA
