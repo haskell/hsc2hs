@@ -170,16 +170,17 @@ findCompiler mb_libdir config
                       Nothing ->
                           die ("Can't find "++default_compiler++"\n")
                       Just path -> return path
-          -- if this hsc2hs is part of a GHC installation on
-          -- Windows, then we should use the mingw gcc that
-          -- comes with GHC (#3929)
-          case mb_libdir of
-              Nothing -> search_path
-              Just d  ->
-                  do let inplaceGcc = d ++ "/../mingw/bin/gcc.exe"
-                     b <- doesFileExist inplaceGcc
-                     if b then return inplaceGcc
-                          else search_path
+              -- if this hsc2hs is part of a GHC installation on
+              -- Windows, then we should use the mingw gcc that
+              -- comes with GHC (#3929)
+              inplaceGccs = case mb_libdir of
+                            Nothing -> []
+                            Just d  -> [d ++ "/../mingw/bin/x86_64-w64-mingw32-gcc.exe",
+                                        d ++ "/../mingw/bin/gcc.exe"]
+              search [] = search_path
+              search (x : xs) = do b <- doesFileExist x
+                                   if b then return x else search xs
+          search inplaceGccs
 
 parseFile :: String -> IO [Token]
 parseFile name
