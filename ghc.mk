@@ -29,7 +29,7 @@ endef
 
 ifneq "$(BINDIST)" "YES"
 
-$(HSC2HS_INPLACE) : $(utils/hsc2hs_template)
+$(HSC2HS_INPLACE) : | $(utils/hsc2hs_template)
 
 # When invoked in the source tree, hsc2hs will try to link in
 # extra-libs from the packages, including libgmp.a.  So we need a
