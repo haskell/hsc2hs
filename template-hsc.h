@@ -31,11 +31,11 @@ void *hsc_stdout(void);
     hsc_printf ("{-# LINE %d \"%s\" #-}\n", line, file);
 #endif
 
-#define hsc_const(x...)                     \
-    if ((x) < 0)                            \
-        hsc_printf ("%ld", (long)(x));      \
-    else                                    \
-        hsc_printf ("%lu", (unsigned long)(x));
+#define hsc_const(x...)                               \
+    if ((x) < 0)                                      \
+        hsc_printf ("%lld", (long long)(x));          \
+    else                                              \
+        hsc_printf ("%llu", (unsigned long long)(x));
 
 #define hsc_const_str(x...)                                       \
     {                                                             \
@@ -85,15 +85,15 @@ void *hsc_stdout(void);
 #define hsc_size(t...) \
     hsc_printf("(%ld)", (long) sizeof(t));
 
-#define hsc_enum(t, f, print_name, x)         \
-    print_name;                               \
-    hsc_printf (" :: %s\n", #t);                  \
-    print_name;                               \
-    hsc_printf (" = %s ", #f);                    \
-    if ((x) < 0)                              \
-        hsc_printf ("(%ld)\n", (long)(x));        \
-    else                                      \
-        hsc_printf ("%lu\n", (unsigned long)(x));
+#define hsc_enum(t, f, print_name, x)                   \
+    print_name;                                         \
+    hsc_printf (" :: %s\n", #t);                        \
+    print_name;                                         \
+    hsc_printf (" = %s ", #f);                          \
+    if ((x) < 0)                                        \
+        hsc_printf ("(%lld)\n", (long long)(x));        \
+    else                                                \
+        hsc_printf ("%llu\n", (unsigned long long)(x));
 
 #define hsc_haskellize(x...)                                       \
     {                                                              \
