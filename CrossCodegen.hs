@@ -499,7 +499,7 @@ checkConditional _ = error "checkConditional argument isn't a Special"
 -- Make sure the value we're trying to binary search isn't floating point.
 checkValueIsIntegral :: ZCursor Token -> Bool -> TestMonad Bool
 checkValueIsIntegral z@(ZCursor (Special _ _ value) _ _) nonNegative = do
-    let intType = if nonNegative then "unsigned long" else "long"
+    let intType = if nonNegative then "unsigned long long" else "long long"
     testLog ("checking if " ++ value ++ " is an integer") $ do
         success <- runCompileBooleanTest z $ "(" ++ intType ++ ")(" ++ value ++ ") == (" ++ value ++ ")"
         testLog' $ "result: " ++ (if success then "integer" else "floating")
