@@ -185,8 +185,7 @@ findCompiler mb_libdir config
               -- comes with GHC (#3929)
               inplaceGccs = case mb_libdir of
                             Nothing -> []
-                            Just d  -> [d ++ "/../mingw/bin/x86_64-w64-mingw32-gcc.exe",
-                                        d ++ "/../mingw/bin/gcc.exe"]
+                            Just d  -> [d ++ "/../mingw/bin/gcc.exe"]
               search [] = search_path
               search (x : xs) = do b <- doesFileExist x
                                    if b then return x else search xs
