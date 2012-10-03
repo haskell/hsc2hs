@@ -6,6 +6,7 @@ utils/hsc2hs_dist-install_PROG = $(GHC_HSC2HS_PGM)
 
 utils/hsc2hs_dist_SHELL_WRAPPER = YES
 utils/hsc2hs_dist_INSTALL = NO
+utils/hsc2hs_dist_INSTALL_INPLACE = YES
 
 utils/hsc2hs_dist-install_SHELL_WRAPPER = YES
 utils/hsc2hs_dist-install_INSTALL = YES
