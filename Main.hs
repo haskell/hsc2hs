@@ -25,6 +25,7 @@ import Foreign.C.String
 import System.Directory         ( doesFileExist, findExecutable )
 import System.Environment       ( getProgName, getArgs )
 import System.Exit              ( ExitCode(..), exitWith )
+import System.FilePath          ( normalise, splitFileName, splitExtension )
 import System.IO
 
 #ifdef BUILD_NHC
@@ -117,14 +118,14 @@ processFiles configM files usage = do
                             then return (dir++base++"_out.hs", dir, base)
                             else return (dir++base++".hs",     dir, base)
                    where
-                    (dir,  file) = splitName name
-                    (base, ext)  = splitExt  file
+                    (dir,  file) = splitFileName  name
+                    (base, ext)  = splitExtension file
              [f] -> let
-                 (dir,  file) = splitName f
-                 (base, _)    = splitExt file
+                 (dir,  file) = splitFileName  f
+                 (base, _)    = splitExtension file
                  in return (f, dir, base)
              _ -> onlyOne "output file"
-        let file_name = dosifyPath name
+        let file_name = normalise name
         toks <- parseFile file_name
         outputter config outName outDir outBase file_name toks)
 
@@ -218,7 +219,7 @@ getExecDir :: String -> IO (Maybe String)
 getExecDir cmd =
     getExecPath >>= maybe (return Nothing) removeCmdSuffix
     where initN n = reverse . drop n . reverse
-          removeCmdSuffix = return . Just . initN (length cmd) . unDosifyPath
+          removeCmdSuffix = return . Just . initN (length cmd) . normalise
 
 getExecPath :: IO (Maybe String)
 #if defined(mingw32_HOST_OS)

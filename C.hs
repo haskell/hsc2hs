@@ -8,9 +8,9 @@ compiled and run; the output of that program is the .hs file.
 
 import Data.Char                ( isSpace, intToDigit, ord )
 import Data.List                ( intersperse )
-import HSCParser                ( SourcePos(..), Token(..) )
+import System.FilePath          ( splitFileName )
 
-import Common
+import HSCParser                ( SourcePos(..), Token(..) )
 import Flags
 
 outTemplateHeaderCProg :: FilePath -> String
@@ -181,7 +181,7 @@ conditional _         = False
 
 outCLine :: SourcePos -> String
 outCLine (SourcePos name line) =
-    "#line "++show line++" \""++showCString (snd (splitName name))++"\"\n"
+    "#line "++show line++" \""++showCString (snd (splitFileName name))++"\"\n"
 
 outHsLine :: SourcePos -> String
 outHsLine (SourcePos name line) =

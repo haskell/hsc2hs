@@ -10,6 +10,7 @@ import Data.Char                ( isAlphaNum, toUpper )
 import Control.Monad            ( when, forM_ )
 
 import System.Exit              ( ExitCode(..), exitWith )
+import System.FilePath          ( normalise )
 
 import C
 import Common
@@ -35,7 +36,7 @@ outputDirect config outName outDir outBase name toks = do
         outCName     = outDir++outBase++"_hsc.c"
 
     let execProgName
-            | null outDir = dosifyPath ("./" ++ progName)
+            | null outDir = normalise ("./" ++ progName)
             | otherwise   = progName
 
     let specials = [(pos, key, arg) | Special pos key arg <- toks]

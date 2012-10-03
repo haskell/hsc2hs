@@ -22,24 +22,6 @@ default_compiler = "gcc"
 ------------------------------------------------------------------------
 -- Write the output files.
 
-splitName :: String -> (String, String)
-splitName name =
-    case break (== '/') name of
-        (file, [])       -> ([], file)
-        (dir,  sep:rest) -> (dir++sep:restDir, restFile)
-            where
-            (restDir, restFile) = splitName rest
-
-splitExt :: String -> (String, String)
-splitExt name =
-    case break (== '.') name of
-        (base, [])         -> (base, [])
-        (base, sepRest@(sep:rest))
-            | null restExt -> (base,               sepRest)
-            | otherwise    -> (base++sep:restBase, restExt)
-            where
-            (restBase, restExt) = splitExt rest
-
 writeBinaryFile :: FilePath -> String -> IO ()
 writeBinaryFile fp str = withBinaryFile fp WriteMode $ \h -> hPutStr h str
 
@@ -86,21 +68,4 @@ catchIO = Exception.catch
 
 onlyOne :: String -> IO a
 onlyOne what = die ("Only one "++what++" may be specified\n")
-
------------------------------------------
--- Modified version from ghc/compiler/SysTools
--- Convert paths foo/baz to foo\baz on Windows
-
-subst :: Char -> Char -> String -> String
-#if defined(mingw32_HOST_OS) || defined(__CYGWIN32__)
-subst a b = map (\x -> if x == a then b else x)
-#else
-subst _ _ = id
-#endif
-
-dosifyPath :: String -> String
-dosifyPath = subst '/' '\\'
-
-unDosifyPath :: String -> String
-unDosifyPath = subst '\\' '/'
 
