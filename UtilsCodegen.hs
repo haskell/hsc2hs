@@ -60,16 +60,18 @@ withUtilsObject config outDir outBase f = do
              "",
              -- "void" should really be "FILE", but we aren't able to
              -- refer to "FILE" in template-hsc.h as we don't want to
-             -- include <stdio.h> there
+             -- include <stdio.h> there. We cast to FILE * so as to
+             -- allow compiling with g++.
              "int hsc_fputs(const char *s, void *stream) {",
-             "    return fputs(s, stream);",
+             "    return fputs(s, (FILE *)stream);",
              "}",
              "",
              -- "void" should really be "FILE", but we aren't able to
              -- refer to "FILE" in template-hsc.h as we don't want to
-             -- include <stdio.h> there
+             -- include <stdio.h> there. We explicitly cast to void *
+             -- to allow compiling with g++.
              "void *hsc_stdout(void) {",
-             "    return stdout;",
+             "    return (void *)stdout;",
              "}"
             ]
 
