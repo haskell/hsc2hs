@@ -6,9 +6,7 @@ import qualified Control.Exception as Exception
 import Control.Monad            ( when )
 import System.IO
 
-import System.Process           ( runProcess, waitForProcess )
-
-import System.Cmd               ( rawSystem )
+import System.Process           ( rawSystem, runProcess, waitForProcess )
 
 import System.Exit              ( ExitCode(..), exitWith )
 import System.Directory         ( removeFile )
