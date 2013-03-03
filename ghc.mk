@@ -1,8 +1,8 @@
 utils/hsc2hs_USES_CABAL = YES
 utils/hsc2hs_PACKAGE = hsc2hs
 
-utils/hsc2hs_dist_PROG         = hsc2hs$(exeext)
-utils/hsc2hs_dist-install_PROG = hsc2hs$(exeext)
+utils/hsc2hs_dist_PROGNAME         = hsc2hs
+utils/hsc2hs_dist-install_PROGNAME = hsc2hs
 
 utils/hsc2hs_dist_SHELL_WRAPPER = YES
 utils/hsc2hs_dist_INSTALL = NO
