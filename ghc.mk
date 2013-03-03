@@ -1,8 +1,8 @@
 utils/hsc2hs_USES_CABAL = YES
 utils/hsc2hs_PACKAGE = hsc2hs
 
-utils/hsc2hs_dist_PROG         = $(GHC_HSC2HS_PGM)
-utils/hsc2hs_dist-install_PROG = $(GHC_HSC2HS_PGM)
+utils/hsc2hs_dist_PROG         = hsc2hs$(exeext)
+utils/hsc2hs_dist-install_PROG = hsc2hs$(exeext)
 
 utils/hsc2hs_dist_SHELL_WRAPPER = YES
 utils/hsc2hs_dist_INSTALL = NO
@@ -30,12 +30,12 @@ endef
 
 ifneq "$(BINDIST)" "YES"
 
-$(HSC2HS_INPLACE) : | $(utils/hsc2hs_template)
+$(hsc2hs_INPLACE) : | $(utils/hsc2hs_template)
 
 # When invoked in the source tree, hsc2hs will try to link in
 # extra-libs from the packages, including libgmp.a.  So we need a
 # dependency to ensure these libs are built before we invoke hsc2hs:
-$(HSC2HS_INPLACE) : $(OTHER_LIBS)
+$(hsc2hs_INPLACE) : $(OTHER_LIBS)
 
 $(utils/hsc2hs_template) : utils/hsc2hs/template-hsc.h | $$(dir $$@)/.
 	"$(CP)" $< $@
