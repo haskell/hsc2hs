@@ -21,9 +21,11 @@ utils/hsc2hs_dist-install_MODULES = $(utils/hsc2hs_dist_MODULES)
 
 utils/hsc2hs_template=$(INPLACE_TOPDIR)/template-hsc.h
 
-define utils/hsc2hs_dist_SHELL_WRAPPER_EXTRA
-echo 'HSC2HS_EXTRA="$(addprefix --cflag=,$(CONF_CC_OPTS_STAGE0)) $(addprefix --lflag=,$(CONF_GCC_LINKER_OPTS_STAGE0)) -I$(TOP)/includes"' >> "$(WRAPPER)"
-endef
+# Here we encode the cc and linker options into the wrapper for the released
+# hsc2hs binary using a HSC2HS_EXTRA variable.
+# For the stage0 wrapper (built in dist), we don't do this, because the build
+# system uses it for all stages and passes the right options for each stage
+# on the command line
 define utils/hsc2hs_dist-install_SHELL_WRAPPER_EXTRA
 echo 'HSC2HS_EXTRA="$(addprefix --cflag=,$(CONF_CC_OPTS_STAGE1)) $(addprefix --lflag=,$(CONF_GCC_LINKER_OPTS_STAGE1))"' >> "$(WRAPPER)"
 endef
