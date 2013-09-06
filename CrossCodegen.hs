@@ -26,12 +26,13 @@ import System.IO (hPutStr, openFile, IOMode(..), hClose)
 import System.Directory (removeFile)
 import Data.Char (toLower,toUpper,isSpace)
 import Control.Exception (assert, onException)
-import Control.Monad (when,liftM,forM)
+import Control.Monad (when, liftM, forM, ap)
+import Control.Applicative (Applicative(..))
 import Data.Foldable (concatMap)
 import Data.Maybe (fromMaybe)
 import qualified Data.Sequence as S
 import Data.Sequence ((|>),ViewL(..))
-import System.Exit              ( ExitCode(..) )
+import System.Exit ( ExitCode(..) )
 import System.Process
 
 import C
@@ -43,14 +44,20 @@ import HSCParser
 -- and a state counter for unique filename generation.
 -- equivalent to ErrorT String (StateT Int (ReaderT TestMonadEnv IO))
 newtype TestMonad a = TestMonad { runTest :: TestMonadEnv -> Int -> IO (Either String a, Int) }
+
+instance Functor TestMonad where
+    fmap = liftM
+
+instance Applicative TestMonad where
+    pure = return
+    (<*>) = ap
+
 instance Monad TestMonad where
     return a = TestMonad (\_ c -> return $ (Right a, c))
     x >>= fn = TestMonad (\e c -> (runTest x e c) >>=
                                       (\(a,c') -> either (\err -> return (Left err, c'))
                                                          (\result -> runTest (fn result) e c')
                                                          a))
-instance Functor TestMonad where
-    fmap = liftM
 
 data TestMonadEnv = TestMonadEnv {
     testIsVerbose_ :: Bool,
