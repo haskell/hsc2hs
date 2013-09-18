@@ -1,6 +1,6 @@
 module HSCParser where
-
-import Control.Monad            ( MonadPlus(..), liftM, liftM2 )
+import Control.Applicative      hiding ( many )
+import Control.Monad            ( MonadPlus(..), liftM, liftM2, ap )
 import Data.Char                ( isAlpha, isAlphaNum, isSpace, isDigit )
 
 ------------------------------------------------------------------------
@@ -21,6 +21,13 @@ updatePos pos@(SourcePos name line) ch = case ch of
     '\n' -> SourcePos name (line + 1)
     _    -> pos
 
+instance Functor Parser where
+    fmap = liftM
+
+instance Applicative Parser where
+    pure  = return
+    (<*>) = ap
+
 instance Monad Parser where
     return a = Parser $ \pos s -> Success pos [] s a
     Parser m >>= k =
@@ -32,6 +39,10 @@ instance Monad Parser where
                     Failure pos'' msg -> Failure pos'' msg
             Failure pos' msg -> Failure pos' msg
     fail msg = Parser $ \pos _ -> Failure pos msg
+
+instance Alternative Parser where
+    empty = mzero
+    (<|>) = mplus
 
 instance MonadPlus Parser where
     mzero                     = fail "mzero"
