@@ -228,8 +228,8 @@ outputSpecial output (z@ZCursor {zCursor=Special pos@(SourcePos file line)  key 
        "error" -> testFail pos ("#error " ++ value)
        "warning" -> liftTestIO $ putStrLn (file ++ ":" ++ show line ++ " warning: " ++ value)
        "include" -> return ()
-       "define" -> output $ outHeaderCProg' (zCursor z)
-       "undef" -> output $ outHeaderCProg' (zCursor z)
+       "define" -> return ()
+       "undef" -> return ()
        _ -> testFail pos ("directive " ++ key ++ " cannot be handled in cross-compilation mode")
     where outputConst value' formatter = computeConst z value' >>= (output . formatter)
 outputSpecial _ _ = error "outputSpecial's argument isn't a Special"
