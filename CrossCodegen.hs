@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 
 module CrossCodegen where
@@ -27,7 +28,9 @@ import System.Directory (removeFile)
 import Data.Char (toLower,toUpper,isSpace)
 import Control.Exception (assert, onException)
 import Control.Monad (when, liftM, forM, ap)
+#if __GLASGOW_HASKELL__ < 709
 import Control.Applicative (Applicative(..))
+#endif
 import Data.Foldable (concatMap)
 import Data.Maybe (fromMaybe)
 import qualified Data.Sequence as S
