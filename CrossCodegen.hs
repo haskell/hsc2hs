@@ -384,7 +384,9 @@ binarySearch z nonNegative l u = do
         mid = (l+u+1) `div` 2
     inTopHalf <- compareConst z (GreaterOrEqual $ (if nonNegative then Unsigned else Signed) mid)
     let (l',u') = if inTopHalf then (mid,u) else (l,(mid-1))
-    assert (mid > l && mid <= u && u > l && u' >= l' && u' - l' < u - l && u' <= u && l' >= l)
+    assert (l < mid && mid <= u &&             -- l < mid <= u
+            l <= l' && l' <= u' && u' <= u &&  -- l <= l' <= u' <= u
+            u'-l' < u-l)                       -- |u' - l'| < |u - l|
            (binarySearch z nonNegative l' u')
 
 -- Establishes bounds on the unknown integer. By searching increasingly
@@ -426,17 +428,19 @@ haskellize (firstLetter:next) = toLower firstLetter : loop False next
           loop _ ('_':as) = loop True as
           loop upper (a:as) = (if upper then toUpper a else toLower a) : loop False as
 
--- For #{enum} codegen; in normal hsc2hs, any whitespace in the enum types & constructors
--- will be mangled by the C preprocessor. This mimics the same mangling.
+-- For #{enum} codegen; in normal hsc2hs, any whitespace in the enum types &
+-- constructors will be mangled by the C preprocessor. This mimics the same
+-- mangling.
 stringify :: String -> String
-stringify s = reverse .  dropWhile isSpace . reverse -- drop trailing space
-              . dropWhile isSpace                    -- drop leading space
-              . compressSpaces                       -- replace each span of
-                                                     -- whitespace with a single space
-              $ s
-    where compressSpaces [] = []
-          compressSpaces (a:as) | isSpace a = ' ' : compressSpaces (dropWhile isSpace as)
-          compressSpaces (a:as) = a : compressSpaces as
+-- Spec: stringify = unwords . words
+stringify xs = go False (dropWhile isSpace xs)
+  where
+    go _haveSpace [] = []
+    go  haveSpace (x:xs)
+      | isSpace x = go True xs
+      | otherwise = if haveSpace
+                    then ' ' : x : go False xs
+                    else x : go False xs
 
 computeEnum :: ZCursor Token -> TestMonad String
 computeEnum z@(ZCursor (Special _ _ enumText) _ _) = 
