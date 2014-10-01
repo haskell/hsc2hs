@@ -433,7 +433,7 @@ haskellize (firstLetter:next) = toLower firstLetter : loop False next
 -- mangling.
 stringify :: String -> String
 -- Spec: stringify = unwords . words
-stringify xs = go False (dropWhile isSpace xs)
+stringify = go False . dropWhile isSpace
   where
     go _haveSpace [] = []
     go  haveSpace (x:xs)
