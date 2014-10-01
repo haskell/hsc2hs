@@ -5,7 +5,7 @@ Build-Depends: base, directory, process
 License: BSD3
 License-File: LICENSE
 Author: Marcin Kowalczyk <qrczak@knm.org.pl>
-Maintainer: cvs-fptools@haskell.org
+Maintainer: ghc-devs@haskell.org
 Synopsis: A preprocessor that helps with writing Haskell bindings to C code
 Description:
     The hsc2hs program can be used to automate some parts of the
