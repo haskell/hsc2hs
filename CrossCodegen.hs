@@ -452,7 +452,7 @@ computeEnum z@(ZCursor (Special _ _ enumText) _ _) =
                 let hsName = fromMaybe (haskellize cName) maybeHsName
                 return $
                     hsName ++ " :: " ++ stringify enumType ++ "\n" ++
-                    hsName ++ " = " ++ stringify constructor ++ " " ++ show constValue ++ "\n"
+                    hsName ++ " = " ++ stringify constructor ++ " " ++ showsPrec 11 constValue "\n"
     where concatM l = liftM concat . forM l
 computeEnum _ = error "computeEnum argument isn't a Special"
 
