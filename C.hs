@@ -152,18 +152,18 @@ outTokenC (pos, key, arg) =
             's':'t':'r':'u':'c':'t':' ':_ -> ""
             't':'y':'p':'e':'d':'e':'f':' ':_ -> ""
             'i':'n':'l':'i':'n':'e':' ':arg' ->
-		case span (\c -> c /= '{' && c /= '=') arg' of
-		(header, body) ->
-		    outCLine pos++
-		    "#ifndef __GNUC__\n" ++
-		    "extern inline\n" ++
-		    "#endif\n"++
-		    header++
-		    "\n#ifndef __GNUC__\n" ++
-		    ";\n" ++
-		    "#else\n"++
-		    body++
-		    "\n#endif\n"
+                case span (\c -> c /= '{' && c /= '=') arg' of
+                (header, body) ->
+                    outCLine pos++
+                    "#ifndef __GNUC__\n" ++
+                    "extern inline\n" ++
+                    "#endif\n"++
+                    header++
+                    "\n#ifndef __GNUC__\n" ++
+                    ";\n" ++
+                    "#else\n"++
+                    body++
+                    "\n#endif\n"
             _ -> outCLine pos++arg++"\n"
         _ | conditional key -> outCLine pos++"#"++key++" "++arg++"\n"
         _ -> ""
@@ -207,4 +207,3 @@ showCString = concatMap showCChar
                       intToDigit (ord c `quot` 64),
                       intToDigit (ord c `quot` 8 `mod` 8),
                       intToDigit (ord c          `mod` 8)]
-

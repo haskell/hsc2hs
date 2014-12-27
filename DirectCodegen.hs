@@ -31,7 +31,7 @@ outputDirect config outName outDir outBase name toks = do
 -- via GHC has changed a few times, so this seems to be the only way...  :-P * * *
                           ++ ".exe"
 #endif
-	outHFile     = outBase++"_hsc.h"
+        outHFile     = outBase++"_hsc.h"
         outHName     = outDir++outHFile
         outCName     = outDir++outBase++"_hsc.c"
 
@@ -107,4 +107,3 @@ outputDirect config outName outDir outBase name toks = do
             concatMap outTokenC specials
             -- NB. outHFile not outHName; works better when processed
             -- by gcc or mkdependC.
-

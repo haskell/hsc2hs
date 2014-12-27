@@ -66,4 +66,3 @@ catchIO = Exception.catch
 
 onlyOne :: String -> IO a
 onlyOne what = die ("Only one "++what++" may be specified\n")
-
