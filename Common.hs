@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 module Common where
 
 import Control.Exception        ( bracket_ )

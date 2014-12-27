@@ -1,5 +1,4 @@
-{-# OPTIONS -cpp #-}
-{-# LANGUAGE CPP, ForeignFunctionInterface #-}
+{-# LANGUAGE CPP #-}
 
 ------------------------------------------------------------------------
 -- Program for converting .hsc files to .hs files, by converting the
