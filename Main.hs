@@ -9,10 +9,6 @@
 --
 -- See the documentation in the Users' Guide for more details.
 
-#if defined(__GLASGOW_HASKELL__) && !defined(BUILD_NHC)
-#include "../../includes/ghcconfig.h"
-#endif
-
 import Control.Monad            ( liftM, forM_ )
 import Data.List                ( isSuffixOf )
 import System.Console.GetOpt
