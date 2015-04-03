@@ -143,7 +143,7 @@ testLogAtPos :: SourcePos -> String -> TestMonad a -> TestMonad a
 testLogAtPos (SourcePos file line) s a = testLog (file ++ ":" ++ show line ++ " " ++ s) a
 
 -- Given a list of file suffixes, will generate a list of filenames
--- which are all unique and have the given suffixes. On exit from this 
+-- which are all unique and have the given suffixes. On exit from this
 -- action, all those files will be removed (unless keepFiles is active)
 makeTest :: [String] -> ([String] -> TestMonad a) -> TestMonad a
 makeTest fileSuffixes fn = do
@@ -287,7 +287,7 @@ outValidityCheck s@(Special pos key value) uniq =
        "peek" -> checkValidConst ("offsetof(" ++ value ++ ")")
        "poke" -> checkValidConst ("offsetof(" ++ value ++ ")")
        "ptr" -> checkValidConst ("offsetof(" ++ value ++ ")")
-       "type" -> checkValidType 
+       "type" -> checkValidType
        "enum" -> checkValidEnum
        _ -> outHeaderCProg' s
     where
@@ -443,7 +443,7 @@ stringify = go False . dropWhile isSpace
                     else x : go False xs
 
 computeEnum :: ZCursor Token -> TestMonad String
-computeEnum z@(ZCursor (Special _ _ enumText) _ _) = 
+computeEnum z@(ZCursor (Special _ _ enumText) _ _) =
     case parseEnum enumText of
         Nothing -> return ""
         Just (enumType,constructor,enums) ->
@@ -544,9 +544,9 @@ runCompileBooleanTest (ZCursor s above below) booleanTest = do
                (concatMap outHeaderCProg' above) ++
                outHeaderCProg' s ++
                -- the test
-               "void _hsc2hs_test() {\n" ++
+               "int _hsc2hs_test() {\n" ++
                "  static int test_array[1 - 2 * !(" ++ booleanTest ++ ")];\n" ++
-               "  test_array[0] = 0;\n" ++
+               "  return test_array[0];\n" ++
                "}\n" ++
                (concatMap outHeaderCProg' below)
     runCompileTest test
