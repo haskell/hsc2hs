@@ -25,11 +25,11 @@ instance Functor Parser where
     fmap = liftM
 
 instance Applicative Parser where
-    pure  = return
+    pure a = Parser $ \pos s -> Success pos [] s a
     (<*>) = ap
 
 instance Monad Parser where
-    return a = Parser $ \pos s -> Success pos [] s a
+    return = pure
     Parser m >>= k =
         Parser $ \pos s -> case m pos s of
             Success pos' out1 s' a -> case k a of

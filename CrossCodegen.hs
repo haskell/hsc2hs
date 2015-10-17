@@ -52,11 +52,11 @@ instance Functor TestMonad where
     fmap = liftM
 
 instance Applicative TestMonad where
-    pure = return
+    pure a = TestMonad (\_ c -> pure (Right a, c))
     (<*>) = ap
 
 instance Monad TestMonad where
-    return a = TestMonad (\_ c -> return $ (Right a, c))
+    return = pure
     x >>= fn = TestMonad (\e c -> (runTest x e c) >>=
                                       (\(a,c') -> either (\err -> return (Left err, c'))
                                                          (\result -> runTest (fn result) e c')
