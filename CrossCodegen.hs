@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 
 module CrossCodegen where
@@ -561,12 +560,7 @@ runCompileTest testStr = do
 
 runCompiler :: FilePath -> [String] -> Maybe FilePath -> TestMonad Bool
 runCompiler prog args mStdoutFile = do
-  let cmdLine =
-#if MIN_VERSION_process(1,1,0)
-            showCommandForUser prog args
-#else
-            unwords (prog : args)
-#endif
+  let cmdLine = showCommandForUser prog args
   testLog ("executing: " ++ cmdLine) $ liftTestIO $ do
       mHOut <- case mStdoutFile of
                Nothing -> return Nothing
