@@ -28,9 +28,7 @@ import System.Directory (removeFile)
 import Data.Char (toLower,toUpper,isSpace)
 import Control.Exception (assert, onException)
 import Control.Monad (when, liftM, forM, ap)
-#if __GLASGOW_HASKELL__ < 709
-import Control.Applicative (Applicative(..))
-#endif
+import Control.Applicative as AP (Applicative(..))
 import Data.Foldable (concatMap)
 import Data.Maybe (fromMaybe)
 import qualified Data.Sequence as S
@@ -56,7 +54,7 @@ instance Applicative TestMonad where
     (<*>) = ap
 
 instance Monad TestMonad where
-    return = pure
+    return = AP.pure
     x >>= fn = TestMonad (\e c -> (runTest x e c) >>=
                                       (\(a,c') -> either (\err -> return (Left err, c'))
                                                          (\result -> runTest (fn result) e c')
