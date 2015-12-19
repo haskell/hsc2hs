@@ -217,6 +217,8 @@ outputSpecial output (z@ZCursor {zCursor=Special pos@(SourcePos file line)  key 
        "const" -> outputConst value show
        "offset" -> outputConst ("offsetof(" ++ value ++ ")") (\i -> "(" ++ show i ++ ")")
        "size" -> outputConst ("sizeof(" ++ value ++ ")") (\i -> "(" ++ show i ++ ")")
+       "alignment" -> outputConst (alignment value)
+                                  (\i -> "(" ++ show i ++ ")")
        "peek" -> outputConst ("offsetof(" ++ value ++ ")")
                              (\i -> "(\\hsc_ptr -> peekByteOff hsc_ptr " ++ show i ++ ")")
        "poke" -> outputConst ("offsetof(" ++ value ++ ")")
@@ -281,6 +283,7 @@ outValidityCheck s@(Special pos key value) uniq =
        "const" -> checkValidConst value
        "offset" -> checkValidConst ("offsetof(" ++ value ++ ")")
        "size" -> checkValidConst ("sizeof(" ++ value ++ ")")
+       "alignment" -> checkValidConst (alignment value)
        "peek" -> checkValidConst ("offsetof(" ++ value ++ ")")
        "poke" -> checkValidConst ("offsetof(" ++ value ++ ")")
        "ptr" -> checkValidConst ("offsetof(" ++ value ++ ")")
@@ -438,6 +441,10 @@ stringify = go False . dropWhile isSpace
       | otherwise = if haveSpace
                     then ' ' : x : go False xs
                     else x : go False xs
+
+-- For #{alignment} codegen; mimic's template-hsc.h's hsc_alignment
+alignment :: String -> String
+alignment t = "offsetof(struct {char x__; " ++ t ++ " (y__); }, y__)"
 
 computeEnum :: ZCursor Token -> TestMonad String
 computeEnum z@(ZCursor (Special _ _ enumText) _ _) =

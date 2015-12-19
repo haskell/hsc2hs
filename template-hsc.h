@@ -85,6 +85,9 @@ void *hsc_stdout(void);
 #define hsc_size(t...) \
     hsc_printf("(%ld)", (long) sizeof(t));
 
+#define hsc_alignment(t...) \
+    hsc_printf("(%ld)", (long) offsetof(struct {char x__; t (y__); }, y__));
+
 #define hsc_enum(t, f, print_name, x)                   \
     print_name;                                         \
     hsc_printf (" :: %s\n", #t);                        \
