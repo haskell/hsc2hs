@@ -185,7 +185,7 @@ outCLine (SourcePos name line) =
 outHsLine :: SourcePos -> String
 outHsLine (SourcePos name line) =
     "    hsc_line ("++show (line + 1)++", \""++
-    showCString name++"\");\n"
+    (showCString . showCString) name ++ "\");\n"
 
 showCString :: String -> String
 showCString = concatMap showCChar
