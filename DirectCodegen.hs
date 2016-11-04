@@ -63,7 +63,7 @@ outputDirect config outName outDir outBase name toks = do
         outTemplateHeaderCProg (cTemplate config)++
         concatMap outFlagHeaderCProg flags++
         concatMap outHeaderCProg specials++
-        "\nint main (int argc, char *argv [])\n{\n"++
+        "\nint main (void)\n{\n"++
         outHeaderHs flags (if needsH then Just outHName else Nothing) specials++
         outHsLine (SourcePos name 0)++
         concatMap outTokenHs toks++
