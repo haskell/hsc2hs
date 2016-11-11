@@ -1,5 +1,5 @@
 Name: hsc2hs
-Version: 0.68
+Version: 0.68.1
 Copyright: 2000, Marcin Kowalczyk
 License: BSD3
 License-File: LICENSE
@@ -16,12 +16,14 @@ Description:
     provide Haskell counterparts of C types, values of C constants,
     including sizes of C types, and access to fields of C structs.
     .
-    For more details, see
-    <http://www.haskell.org/ghc/docs/latest/html/users_guide/hsc2hs.html>.
+    For more details, see the
+    <http://downloads.haskell.org/~ghc/master/users-guide/utils.html#writing-haskell-interfaces-to-c-code-hsc2hs hsc2hs section>
+    in the GHC User's Guide.
 Category: Development
 Data-Files: template-hsc.h
 build-type: Simple
 cabal-version: >=1.10
+extra-source-files: changelog.md
 
 Executable hsc2hs
     Default-Language: Haskell2010
