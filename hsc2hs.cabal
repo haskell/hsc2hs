@@ -25,6 +25,10 @@ build-type: Simple
 cabal-version: >=1.10
 extra-source-files: changelog.md
 
+source-repository head
+    Type: git
+    Location: git://git.haskell.org/hsc2hs
+
 Executable hsc2hs
     Default-Language: Haskell2010
     Main-Is: Main.hs
