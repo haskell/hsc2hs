@@ -98,6 +98,7 @@ processFiles configM files usage = do
                      cNoCompile    = cNoCompile configM,
                      cCrossCompile = cCrossCompile configM,
                      cCrossSafe    = cCrossSafe configM,
+                     cColumn       = cColumn configM,
                      cVerbose      = cVerbose configM,
                      cFlags        = cFlags configM ++ extraFlags
                  }
@@ -200,8 +201,8 @@ parseFile name
        let s' = filter ('\r' /=) s
        case runParser parser name s' of
          Success _ _ _ toks -> return toks
-         Failure (SourcePos name' line) msg ->
-           die (name'++":"++show line++": "++msg++"\n")
+         Failure (SourcePos name' line col) msg ->
+           die (name'++":"++show line++":"++show col++": "++msg++"\n")
 
 getLibDir :: IO (Maybe String)
 getLibDir = fmap (fmap (++ "/lib")) $ getExecDir "/bin/hsc2hs.exe"

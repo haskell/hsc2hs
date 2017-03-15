@@ -7,6 +7,7 @@ compiled and run; the output of that program is the .hs file.
 -}
 
 import Data.Char                ( isAlphaNum, toUpper )
+import Data.Foldable            ( foldl' )
 import Control.Monad            ( when, forM_ )
 
 import System.Exit              ( ExitCode(..), exitWith )
@@ -23,6 +24,7 @@ outputDirect config outName outDir outBase name toks = do
 
     let beVerbose    = cVerbose config
         flags        = cFlags config
+        enableCol    = cColumn config
         cProgName    = outDir++outBase++"_hsc_make.c"
         oProgName    = outDir++outBase++"_hsc_make.o"
         progName     = outDir++outBase++"_hsc_make"
@@ -53,7 +55,7 @@ outputDirect config outName outDir outBase name toks = do
                       | otherwise    = '_'
 
     when (cCrossSafe config) $
-        forM_ specials (\ (SourcePos file line,key,_) ->
+        forM_ specials (\ (SourcePos file line _,key,_) ->
             when (not $ key `elem` ["const","offset","size","alignment","peek","poke","ptr",
                                     "type","enum","error","warning","include","define","undef",
                                     "if","ifdef","ifndef", "elif","else","endif"]) $
@@ -65,8 +67,8 @@ outputDirect config outName outDir outBase name toks = do
         concatMap outHeaderCProg specials++
         "\nint main (void)\n{\n"++
         outHeaderHs flags (if needsH then Just outHName else Nothing) specials++
-        outHsLine (SourcePos name 0)++
-        concatMap outTokenHs toks++
+        outHsLine (SourcePos name 0 1)++
+        fst (foldl' (outTokenHs enableCol) (id, (True, True)) toks) ""++
         "    return 0;\n}\n"
 
     when (cNoCompile config) $ exitWith ExitSuccess

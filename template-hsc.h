@@ -26,9 +26,12 @@ void *hsc_stdout(void);
 #if __NHC__
 #define hsc_line(line, file) \
     hsc_printf ("# %d \"%s\"\n", line, file);
+#define hsc_column(column)
 #else
 #define hsc_line(line, file) \
     hsc_printf ("{-# LINE %d \"%s\" #-}\n", line, file);
+#define hsc_column(column) \
+    hsc_printf ("{-# COLUMN %d #-}", column);
 #endif
 
 #define hsc_const(x...)                               \

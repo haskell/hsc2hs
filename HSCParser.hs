@@ -9,17 +9,17 @@ import Data.Char                ( isAlpha, isAlphaNum, isSpace, isDigit )
 newtype Parser a = Parser (SourcePos -> String -> ParseResult a)
 
 runParser :: Parser a -> String -> String -> ParseResult a
-runParser (Parser p) file_name = p (SourcePos file_name 1)
+runParser (Parser p) file_name = p (SourcePos file_name 1 1)
 
 data ParseResult a = Success !SourcePos String String a
                    | Failure !SourcePos String
 
-data SourcePos = SourcePos String !Int
+data SourcePos = SourcePos String !Int !Int
 
 updatePos :: SourcePos -> Char -> SourcePos
-updatePos pos@(SourcePos name line) ch = case ch of
-    '\n' -> SourcePos name (line + 1)
-    _    -> pos
+updatePos (SourcePos name line col) ch = case ch of
+    '\n' -> SourcePos name (line + 1) 1
+    _    -> SourcePos name line (col + 1)
 
 instance Functor Parser where
     fmap = liftM
@@ -125,6 +125,10 @@ data Token
     = Text    SourcePos String
     | Special SourcePos String String
 
+tokenIsSpecial :: Token -> Bool
+tokenIsSpecial (Text    {}) = False
+tokenIsSpecial (Special {}) = True
+
 parser :: Parser [Token]
 parser = do
     pos <- getPos
@@ -157,7 +161,9 @@ text = do
                     text
         '\"':_    -> do anyChar_; hsString '\"'; text
         '\'':_    -> do anyChar_; hsString '\''; text
-        '{':'-':_ -> do any2Chars_; linePragma `mplus` hsComment; text
+        '{':'-':_ -> do any2Chars_; linePragma `mplus`
+                                    columnPragma `mplus`
+                                    hsComment; text
         _:_       -> do anyChar_; text
 
 hsString :: Char -> Parser ()
@@ -202,7 +208,26 @@ linePragma = do
     char_ '#'
     char_ '-'
     char_ '}'
-    setPos (SourcePos name (line - 1))
+    setPos (SourcePos name (line - 1) 1)
+
+columnPragma :: Parser ()
+columnPragma = do
+    char_ '#'
+    manySatisfy_ isSpace
+    satisfy_ (\c -> c == 'C' || c == 'c')
+    satisfy_ (\c -> c == 'O' || c == 'o')
+    satisfy_ (\c -> c == 'L' || c == 'l')
+    satisfy_ (\c -> c == 'U' || c == 'u')
+    satisfy_ (\c -> c == 'M' || c == 'm')
+    satisfy_ (\c -> c == 'N' || c == 'n')
+    manySatisfy1_ isSpace
+    column <- liftM read $ manySatisfy1 isDigit
+    manySatisfy_ isSpace
+    char_ '#'
+    char_ '-'
+    char_ '}'
+    SourcePos name line _ <- getPos
+    setPos (SourcePos name line column)
 
 isHsSymbol :: Char -> Bool
 isHsSymbol '!' = True; isHsSymbol '#' = True; isHsSymbol '$'  = True

@@ -97,7 +97,7 @@ testFail' :: String -> TestMonad a
 testFail' s = TestMonad (\_ c -> return (Left s, c))
 
 testFail :: SourcePos -> String -> TestMonad a
-testFail (SourcePos file line) s = testFail' (file ++ ":" ++ show line ++ " " ++ s)
+testFail (SourcePos file line _) s = testFail' (file ++ ":" ++ show line ++ " " ++ s)
 
 -- liftIO for TestMonad
 liftTestIO :: IO a -> TestMonad a
@@ -137,7 +137,7 @@ testLog' :: String -> TestMonad ()
 testLog' s = testLog s (return ())
 
 testLogAtPos :: SourcePos -> String -> TestMonad a -> TestMonad a
-testLogAtPos (SourcePos file line) s a = testLog (file ++ ":" ++ show line ++ " " ++ s) a
+testLogAtPos (SourcePos file line _) s a = testLog (file ++ ":" ++ show line ++ " " ++ s) a
 
 -- Given a list of file suffixes, will generate a list of filenames
 -- which are all unique and have the given suffixes. On exit from this
@@ -192,58 +192,63 @@ diagnose :: String -> (String -> TestMonad ()) -> [Token] -> TestMonad ()
 diagnose inputFilename output input = do
     checkValidity input
     output ("{-# LINE 1 \"" ++ inputFilename ++ "\" #-}\n")
-    loop (zipFromList input)
+    loop (True, True) (zipFromList input)
 
     where
-    loop (End _) = return ()
-    loop (Zipper z@ZCursor {zCursor=Special _ key _}) =
+    loop _ (End _) = return ()
+    loop state@(lineSync, colSync)
+         (Zipper z@ZCursor {zCursor=Special _ key _}) =
         case key of
             _ | key `elem` ["if","ifdef","ifndef","elif","else"] -> do
                 condHolds <- checkConditional z
                 if condHolds
-                    then loop (zNext z)
-                    else loop =<< (either testFail' return (skipFalseConditional (zNext z)))
-            "endif" -> loop (zNext z)
+                    then loop state (zNext z)
+                    else loop state =<< either testFail' return
+                                               (skipFalseConditional (zNext z))
+            "endif" -> loop state (zNext z)
             _ -> do
-                outputSpecial output z
-                loop (zNext z)
-    loop (Zipper z@ZCursor {zCursor=Text pos txt}) = do
-        outputText output pos txt
-        loop (zNext z)
+                sync <- outputSpecial output z
+                loop (lineSync && sync, colSync && sync) (zNext z)
+    loop state (Zipper z@ZCursor {zCursor=Text pos txt}) = do
+        state' <- outputText state output pos txt
+        loop state' (zNext z)
 
-outputSpecial :: (String -> TestMonad ()) -> ZCursor Token -> TestMonad ()
-outputSpecial output (z@ZCursor {zCursor=Special pos@(SourcePos file line)  key value}) =
+outputSpecial :: (String -> TestMonad ()) -> ZCursor Token -> TestMonad Bool
+outputSpecial output (z@ZCursor {zCursor=Special pos@(SourcePos file line _)  key value}) =
     case key of
-       "const" -> outputConst value show
-       "offset" -> outputConst ("offsetof(" ++ value ++ ")") (\i -> "(" ++ show i ++ ")")
-       "size" -> outputConst ("sizeof(" ++ value ++ ")") (\i -> "(" ++ show i ++ ")")
+       "const" -> outputConst value show >> return False
+       "offset" -> outputConst ("offsetof(" ++ value ++ ")") (\i -> "(" ++ show i ++ ")") >> return False
+       "size" -> outputConst ("sizeof(" ++ value ++ ")") (\i -> "(" ++ show i ++ ")") >> return False
        "alignment" -> outputConst (alignment value)
-                                  (\i -> "(" ++ show i ++ ")")
+                                  (\i -> "(" ++ show i ++ ")") >> return False
        "peek" -> outputConst ("offsetof(" ++ value ++ ")")
-                             (\i -> "(\\hsc_ptr -> peekByteOff hsc_ptr " ++ show i ++ ")")
+                             (\i -> "(\\hsc_ptr -> peekByteOff hsc_ptr " ++ show i ++ ")") >> return False
        "poke" -> outputConst ("offsetof(" ++ value ++ ")")
-                             (\i -> "(\\hsc_ptr -> pokeByteOff hsc_ptr " ++ show i ++ ")")
+                             (\i -> "(\\hsc_ptr -> pokeByteOff hsc_ptr " ++ show i ++ ")") >> return False
        "ptr" -> outputConst ("offsetof(" ++ value ++ ")")
-                            (\i -> "(\\hsc_ptr -> hsc_ptr `plusPtr` " ++ show i ++ ")")
-       "type" -> computeType z >>= output
-       "enum" -> computeEnum z >>= output
+                            (\i -> "(\\hsc_ptr -> hsc_ptr `plusPtr` " ++ show i ++ ")") >> return False
+       "type" -> computeType z >>= output >> return False
+       "enum" -> computeEnum z >>= output >> return False
        "error" -> testFail pos ("#error " ++ value)
-       "warning" -> liftTestIO $ putStrLn (file ++ ":" ++ show line ++ " warning: " ++ value)
-       "include" -> return ()
-       "define" -> return ()
-       "undef" -> return ()
+       "warning" -> liftTestIO $ putStrLn (file ++ ":" ++ show line ++ " warning: " ++ value) >> return True
+       "include" -> return True
+       "define" -> return True
+       "undef" -> return True
        _ -> testFail pos ("directive " ++ key ++ " cannot be handled in cross-compilation mode")
     where outputConst value' formatter = computeConst z value' >>= (output . formatter)
 outputSpecial _ _ = error "outputSpecial's argument isn't a Special"
 
-outputText :: (String -> TestMonad ()) -> SourcePos -> String -> TestMonad ()
-outputText output (SourcePos file line) txt =
-    case break (=='\n') txt of
-        (noNewlines, []) -> output noNewlines
-        (firstLine, _:restOfLines) ->
-            output (firstLine ++ "\n" ++
-                    "{-# LINE " ++ show (line+1) ++ " \"" ++ file ++ "\" #-}\n" ++
-                    restOfLines)
+outputText :: (Bool, Bool) -> (String -> TestMonad ()) -> SourcePos -> String
+           -> TestMonad (Bool, Bool)
+outputText state output pos txt = do
+    enableCol <- fmap cColumn testGetConfig
+    let outCol col | enableCol = "{-# COLUMN " ++ show col ++ " #-}"
+                   | otherwise = ""
+    let outLine (SourcePos file line _) = "{-# LINE " ++ show (line + 1) ++
+                                          " \"" ++ file ++ "\" #-}\n"
+    let (s, state') = outTextHs state pos txt id outLine outCol
+    output s
+    return state'
 
 -- Bleh, messy. For each test we're compiling, we have a specific line of
 -- code that may cause compiler errors -- that's the test we want to perform.

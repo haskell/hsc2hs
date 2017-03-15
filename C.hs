@@ -68,18 +68,20 @@ outHeaderHs flags inH toks =
         "    hsc_printf (\"{-# OPTIONS_GHC %s #-}\\n\", \""++
                   showCString s++"\");\n"
 
-outTokenHs :: Token -> String
-outTokenHs (Text pos txt) =
-    case break (== '\n') txt of
-        (allTxt, [])       -> outText allTxt
-        (first, _:rest) ->
-            outText (first++"\n")++
-            outHsLine pos++
-            outText rest
+outTokenHs :: Bool                      -- ^ enable COLUMN pragmas?
+           -> (ShowS, (Bool, Bool))
+           -> Token
+           -> (ShowS, (Bool, Bool))
+outTokenHs enableCol (out, state) (Text pos txt) =
+    (out . showString str, state')
     where
+    (str, state') = outTextHs state pos txt outText outHsLine
+                              (if enableCol then outHsColumn else const "")
     outText s = "    hsc_fputs (\""++showCString s++"\", hsc_stdout());\n"
-outTokenHs (Special pos key arg) =
-    case key of
+outTokenHs _ (out, (rowSync, colSync)) (Special pos key arg) =
+    (out . showString str, (rowSync && null str, colSync && null str))
+    where
+    str = case key of
         "include"           -> ""
         "define"            -> ""
         "undef"             -> ""
@@ -88,6 +90,52 @@ outTokenHs (Special pos key arg) =
         "let"               -> ""
         "enum"              -> outCLine pos++outEnum arg
         _                   -> outCLine pos++"    hsc_"++key++" ("++arg++");\n"
+
+-- | Output a 'Text' 'Token' literally, making use of the three given output
+-- functions.  The state contains @(lineSync, colSync)@, which indicate
+-- whether the line number and column number in the input are synchronized
+-- with those of the output.
+outTextHs :: (Bool, Bool)               -- ^ state @(lineSync, colSync)@
+          -> SourcePos                  -- ^ original position of the token
+          -> String                     -- ^ text of the token
+          -> (String -> String)         -- ^ output text
+          -> (SourcePos -> String)      -- ^ output LINE pragma
+          -> (Int -> String)            -- ^ output COLUMN pragma
+          -> (String, (Bool, Bool))
+outTextHs (lineSync, colSync) pos@(SourcePos _ _ col) txt
+          outText outLine outColumn =
+    -- Ensure COLUMN pragmas are always inserted right before an identifier.
+    -- They are never inserted in the middle of whitespace, as that could ruin
+    -- the indentation.
+    case break (== '\n') spaces of
+        (_, "") ->
+            case break (== '\n') rest of
+                ("", _) ->
+                    ( outText spaces
+                    , (lineSync, colSync) )
+                (_, "") ->
+                    ( (outText spaces++
+                       updateCol++
+                       outText rest)
+                    , (lineSync, True) )
+                (firstRest, nl:restRest) ->
+                    ( (outText spaces++
+                       updateCol++
+                       outText (firstRest++[nl])++
+                       updateLine++
+                       outText restRest)
+                    , (True, True) )
+        (firstSpaces, nl:restSpaces) ->
+            ( (outText (firstSpaces++[nl])++
+               updateLine++
+               outText (restSpaces++rest))
+            , (True, True) )
+    where
+    (spaces, rest) = span isSpace txt
+    updateLine | lineSync   = ""
+               | otherwise = outLine pos
+    updateCol | colSync   = ""
+              | otherwise = outColumn (col + length spaces)
 
 parseEnum :: String -> Maybe (String,String,[(Maybe String,String)])
 parseEnum arg =
@@ -179,13 +227,17 @@ conditional "warning" = True
 conditional _         = False
 
 outCLine :: SourcePos -> String
-outCLine (SourcePos name line) =
+outCLine (SourcePos name line _) =
     "#line "++show line++" \""++showCString (snd (splitFileName name))++"\"\n"
 
 outHsLine :: SourcePos -> String
-outHsLine (SourcePos name line) =
+outHsLine (SourcePos name line _) =
     "    hsc_line ("++show (line + 1)++", \""++
     (showCString . showCString) name ++ "\");\n"
+
+outHsColumn :: Int -> String
+outHsColumn column =
+    "    hsc_column ("++show column++");\n"
 
 showCString :: String -> String
 showCString = concatMap showCChar

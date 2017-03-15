@@ -19,6 +19,7 @@ data ConfigM m = Config {
                      cNoCompile :: Bool,
                      cCrossCompile :: Bool,
                      cCrossSafe :: Bool,
+                     cColumn :: Bool,
                      cVerbose :: Bool,
                      cFlags :: [Flag]
                  }
@@ -41,6 +42,7 @@ emptyMode = UseConfig $ Config {
                             cNoCompile    = False,
                             cCrossCompile = False,
                             cCrossSafe    = False,
+                            cColumn       = False,
                             cVerbose      = False,
                             cFlags        = []
                         }
@@ -81,6 +83,8 @@ options = [
         "restrict .hsc directives to those supported by --cross-compile",
     Option ['k'] ["keep-files"] (NoArg (withConfig $ setKeepFiles True))
         "do not remove temporary files",
+    Option [] ["column"]     (NoArg (withConfig $ setColumn True))
+        "annotate output with COLUMN pragmas (requires GHC 8.2)",
     Option ['v'] ["verbose"]    (NoArg  (withConfig $ setVerbose True))
         "dump commands to stderr",
     Option ['?'] ["help"]       (NoArg  (setMode Help))
@@ -122,6 +126,9 @@ setCrossCompile b c = c { cCrossCompile = b }
 
 setCrossSafe :: Bool -> ConfigM Maybe -> ConfigM Maybe
 setCrossSafe b c = c { cCrossSafe = b }
+
+setColumn :: Bool -> ConfigM Maybe -> ConfigM Maybe
+setColumn b c = c { cColumn = b }
 
 setVerbose :: Bool -> ConfigM Maybe -> ConfigM Maybe
 setVerbose v c = c { cVerbose = v }
