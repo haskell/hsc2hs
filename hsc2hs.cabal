@@ -27,7 +27,7 @@ extra-source-files: changelog.md
 
 source-repository head
     Type: git
-    Location: git://git.haskell.org/hsc2hs
+    Location: http://git.haskell.org/hsc2hs.git
 
 Executable hsc2hs
     Default-Language: Haskell2010
