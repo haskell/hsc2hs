@@ -13,7 +13,18 @@ utils/hsc2hs_dist-install_INSTALL = YES
 utils/hsc2hs_dist-install_INSTALL_INPLACE = NO
 
 $(eval $(call build-prog,utils/hsc2hs,dist,0))
+
+# When CrossCompiling, we want to ship the binary for the
+# host, not for the target.  As such we need to compile
+# with the Bootstrap compiler rather than with the in-tree
+# stage1 compiler, which would result in a binary that
+# won't run on the host.
+ifeq "$(CrossCompiling)" "YES"
+# compile with stage 0 (bootstrap compiler)
+$(eval $(call build-prog,utils/hsc2hs,dist-install,0))
+else
 $(eval $(call build-prog,utils/hsc2hs,dist-install,1))
+endif
 
 # After build-prog above
 utils/hsc2hs_dist_MODULES += Paths_hsc2hs
