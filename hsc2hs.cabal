@@ -41,6 +41,7 @@ Executable hsc2hs
         Flags
         HSCParser
         UtilsCodegen
+        Paths_hsc2hs
 
     Other-Extensions: CPP, NoMonomorphismRestriction
 
