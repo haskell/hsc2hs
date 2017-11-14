@@ -13,6 +13,20 @@ import Control.Monad            ( liftM, forM_ )
 import Data.List                ( isSuffixOf )
 import System.Console.GetOpt
 
+-- If we ware building the hsc2hs
+-- binary for binary distribution
+-- in the GHC tree.  And if ghc-boot
+-- is 8.3 or newer, we can use the
+-- @getBaseDir@ function to obtain
+-- the path to the @$topdir/lib@
+-- folder, and try to locate the
+-- @template-hsc.h@ there.
+#if defined(IN_GHC_TREE) 
+# if !MIN_VERSION_ghc_boot(8,3,0)
+#  error the impossible happened
+# endif
+#endif
+
 #if defined(mingw32_HOST_OS)
 import Foreign
 import Foreign.C.String
@@ -28,7 +42,7 @@ import System.Directory         ( getCurrentDirectory )
 #else
 import Paths_hsc2hs as Main     ( getDataFileName )
 #endif
-#if MIN_VERSION_ghc_boot(8,3,0)
+#if defined(IN_GHC_TREE)
 import GHC.BasePath             ( getBaseDir )
 #endif
 
@@ -141,8 +155,12 @@ findTemplate usage mb_libdir config
      --
      -- Next we try the location we told Cabal about.
      --
-     -- Finally we also try to locate the template in the `baseDir`
-     -- as provided by the `ghc-boot` library.
+     -- If IN_GHC_TREE is defined (-fin-ghc-tree), we also try to locate
+     -- the template in the `baseDir`, as provided by the `ghc-boot`
+     -- library. Note that this is a hack to work around only partial
+     -- relocatable support in cabal, and is here to allow the hsc2hs
+     -- built and shipped with ghc to be relocatable with the ghc
+     -- binary distribution it ships with.
      --
      -- If neither of the above work, then hopefully we're on Unix and
      -- there's a wrapper script which specifies an explicit template flag.
@@ -171,7 +189,7 @@ findTemplate usage mb_libdir config
                 else return Nothing
      case mb_templ2 of
          Just x -> return x
-#if MIN_VERSION_ghc_boot(8,3,0)
+#if defined(IN_GHC_TREE)
          Nothing -> do
              mb_templ3 <- fmap (</> "template-hsc.h") <$> getBaseDir ["hsc2hs.exe"]
              mb_exists3 <- mapM doesFileExist mb_templ3
