@@ -1,5 +1,5 @@
 Name: hsc2hs
-Version: 0.68.2
+Version: 0.69.0
 Copyright: 2000, Marcin Kowalczyk
 License: BSD3
 License-File: LICENSE
@@ -50,4 +50,8 @@ Executable hsc2hs
                    directory  >= 1   && < 1.4,
                    filepath   >= 1   && < 1.5,
                    process    >= 1.1 && < 1.7
+    if impl(ghc)
+       -- use @getBaseDir@ from ghc-boot to locate
+       -- the template-hsc.h file.
+       build-depends: ghc-boot 
 

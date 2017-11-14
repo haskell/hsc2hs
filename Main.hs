@@ -20,14 +20,16 @@ import Foreign.C.String
 import System.Directory         ( doesFileExist, findExecutable )
 import System.Environment       ( getProgName, getArgs )
 import System.Exit              ( ExitCode(..), exitWith )
-import System.FilePath          ( normalise, splitFileName, splitExtension )
+import System.FilePath          ( normalise, splitFileName, splitExtension, (</>) )
 import System.IO
 
 #ifdef BUILD_NHC
 import System.Directory         ( getCurrentDirectory )
 #else
-import Data.Version             ( showVersion )
-import Paths_hsc2hs as Main     ( getDataFileName, version )
+import Paths_hsc2hs as Main     ( getDataFileName )
+#endif
+#if MIN_VERSION_ghc_boot(8,3,0)
+import GHC.BasePath             ( getBaseDir )
 #endif
 
 import Common
@@ -49,12 +51,10 @@ import HSCParser
 #ifdef BUILD_NHC
 getDataFileName s = do here <- getCurrentDirectory
                        return (here++"/"++s)
-version = "0.67" -- TODO!!!
-showVersion = id
 #endif
 
 versionString :: String
-versionString = "hsc2hs version " ++ showVersion version ++ "\n"
+versionString = "hsc2hs version " ++ CURRENT_PACKAGE_VERSION ++ "\n"
 
 main :: IO ()
 main = do
@@ -141,6 +141,9 @@ findTemplate usage mb_libdir config
      --
      -- Next we try the location we told Cabal about.
      --
+     -- Finally we also try to locate the template in the `baseDir`
+     -- as provided by the `ghc-boot` library.
+     --
      -- If neither of the above work, then hopefully we're on Unix and
      -- there's a wrapper script which specifies an explicit template flag.
      mb_templ1 <-
@@ -157,14 +160,27 @@ findTemplate usage mb_libdir config
          if exists1
             then return $ Just (templ1, CompFlag ("-I" ++ incl))
             else return Nothing
-     case mb_templ1 of
+     mb_templ2 <- case mb_templ1 of
          Just (templ1, incl) ->
-             return (templ1, [incl])
+             return $ Just (templ1, [incl])
          Nothing -> do
              templ2 <- getDataFileName "template-hsc.h"
              exists2 <- doesFileExist templ2
-             if exists2 then return (templ2, [])
-                        else die ("No template specified, and template-hsc.h not located.\n\n" ++ usage)
+             if exists2
+                then return $ Just (templ2, [])
+                else return Nothing
+     case mb_templ2 of
+         Just x -> return x
+#if MIN_VERSION_ghc_boot(8,3,0)
+         Nothing -> do
+             mb_templ3 <- fmap (</> "template-hsc.h") <$> getBaseDir ["hsc2hs.exe"]
+             mb_exists3 <- mapM doesFileExist mb_templ3
+             case (mb_templ3, mb_exists3) of
+                 (Just templ3, Just True) -> return (templ3, [])
+                 _ -> die ("No template specified, and template-hsc.h not located.\n\n" ++ usage)
+#else
+         Nothing -> die ("No template specified, and template-hsc.h not located.\n\n" ++ usage)
+#endif
 
 findCompiler :: Maybe FilePath -> ConfigM Maybe -> IO FilePath
 findCompiler mb_libdir config
