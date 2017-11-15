@@ -34,7 +34,7 @@ import Foreign.C.String
 import System.Directory         ( doesFileExist, findExecutable )
 import System.Environment       ( getProgName, getArgs )
 import System.Exit              ( ExitCode(..), exitWith )
-import System.FilePath          ( normalise, splitFileName, splitExtension, (</>) )
+import System.FilePath          ( normalise, splitFileName, splitExtension )
 import System.IO
 
 #ifdef BUILD_NHC
@@ -44,6 +44,7 @@ import Paths_hsc2hs as Main     ( getDataFileName )
 #endif
 #if defined(IN_GHC_TREE)
 import GHC.BasePath             ( getBaseDir )
+import System.FilePath          ( (</>) )
 #endif
 
 import Common
