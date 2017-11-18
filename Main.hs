@@ -15,13 +15,15 @@ import System.Console.GetOpt
 
 -- If we ware building the hsc2hs
 -- binary for binary distribution
--- in the GHC tree.  And if ghc-boot
--- is 8.3 or newer, we can use the
--- @getBaseDir@ function to obtain
+-- in the GHC tree.  Obtain
 -- the path to the @$topdir/lib@
 -- folder, and try to locate the
 -- @template-hsc.h@ there.
-#if defined(IN_GHC_TREE) 
+--
+-- XXX: Note this does not work
+--      on windows due to for
+--      symlinks. See Trac #14483.
+#if defined(IN_GHC_TREE)
 # if !MIN_VERSION_ghc_boot(8,3,0)
 #  error the impossible happened
 # endif
@@ -43,8 +45,10 @@ import System.Directory         ( getCurrentDirectory )
 import Paths_hsc2hs as Main     ( getDataFileName )
 #endif
 #if defined(IN_GHC_TREE)
-import GHC.BasePath             ( getBaseDir )
+import System.Directory         ( takeDirectory )
+import System.Environment       ( getExecutablePath )
 import System.FilePath          ( (</>) )
+
 #endif
 
 import Common
@@ -192,7 +196,11 @@ findTemplate usage mb_libdir config
          Just x -> return x
 #if defined(IN_GHC_TREE)
          Nothing -> do
-             mb_templ3 <- fmap (</> "template-hsc.h") <$> getBaseDir ["hsc2hs.exe"]
+             -- XXX: this will *not* work on windows for symlinks, until `getExecutablePath` in `base` is
+             --      fixed. The alternative would be to bring the whole logic from the SysTools module in here
+             --      which is rather excessive. See Trac #14483.
+             let getBaseDir = Just . (\p -> p </> "lib") . takeDirectory . takeDirectory <$> getExecutablePath
+             mb_templ3 <- fmap (</> "template-hsc.h") <$> getBaseDir
              mb_exists3 <- mapM doesFileExist mb_templ3
              case (mb_templ3, mb_exists3) of
                  (Just templ3, Just True) -> return (templ3, [])
