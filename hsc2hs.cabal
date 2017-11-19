@@ -1,5 +1,5 @@
 Name: hsc2hs
-Version: 0.68.2
+Version: 0.68.3
 Copyright: 2000, Marcin Kowalczyk
 License: BSD3
 License-File: LICENSE
@@ -26,6 +26,11 @@ cabal-version: >=1.10
 extra-source-files: changelog.md
 tested-with: GHC==8.2.1, GHC==8.0.2, GHC==7.10.3, GHC==7.8.4, GHC==7.6.3, GHC==7.4.2, GHC==7.2.2, GHC==7.0.4
 
+flag in-ghc-tree
+  description: Are we in a GHC tree?
+  default: False
+  manual: True
+
 source-repository head
     Type: git
     Location: http://git.haskell.org/hsc2hs.git
@@ -50,4 +55,6 @@ Executable hsc2hs
                    directory  >= 1   && < 1.4,
                    filepath   >= 1   && < 1.5,
                    process    >= 1.1 && < 1.7
+    if flag(in-ghc-tree)
+       cpp-options: -DIN_GHC_TREE
 

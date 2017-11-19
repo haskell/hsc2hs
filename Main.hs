@@ -13,6 +13,17 @@ import Control.Monad            ( liftM, forM_ )
 import Data.List                ( isSuffixOf )
 import System.Console.GetOpt
 
+-- If we ware building the hsc2hs
+-- binary for binary distribution
+-- in the GHC tree.  Obtain
+-- the path to the @$topdir/lib@
+-- folder, and try to locate the
+-- @template-hsc.h@ there.
+--
+-- XXX: Note this does not work
+--      on windows due to for
+--      symlinks. See Trac #14483.
+
 #if defined(mingw32_HOST_OS)
 import Foreign
 import Foreign.C.String
@@ -26,8 +37,11 @@ import System.IO
 #ifdef BUILD_NHC
 import System.Directory         ( getCurrentDirectory )
 #else
-import Data.Version             ( showVersion )
-import Paths_hsc2hs as Main     ( getDataFileName, version )
+import Paths_hsc2hs as Main     ( getDataFileName )
+#endif
+#if defined(IN_GHC_TREE)
+import System.Environment       ( getExecutablePath )
+import System.FilePath          ( takeDirectory, (</>) )
 #endif
 
 import Common
@@ -49,12 +63,10 @@ import HSCParser
 #ifdef BUILD_NHC
 getDataFileName s = do here <- getCurrentDirectory
                        return (here++"/"++s)
-version = "0.67" -- TODO!!!
-showVersion = id
 #endif
 
 versionString :: String
-versionString = "hsc2hs version " ++ showVersion version ++ "\n"
+versionString = "hsc2hs version " ++ CURRENT_PACKAGE_VERSION ++ "\n"
 
 main :: IO ()
 main = do
@@ -141,6 +153,13 @@ findTemplate usage mb_libdir config
      --
      -- Next we try the location we told Cabal about.
      --
+     -- If IN_GHC_TREE is defined (-fin-ghc-tree), we also try to locate
+     -- the template in the `baseDir`, as provided by the `ghc-boot`
+     -- library. Note that this is a hack to work around only partial
+     -- relocatable support in cabal, and is here to allow the hsc2hs
+     -- built and shipped with ghc to be relocatable with the ghc
+     -- binary distribution it ships with.
+     --
      -- If neither of the above work, then hopefully we're on Unix and
      -- there's a wrapper script which specifies an explicit template flag.
      mb_templ1 <-
@@ -157,14 +176,31 @@ findTemplate usage mb_libdir config
          if exists1
             then return $ Just (templ1, CompFlag ("-I" ++ incl))
             else return Nothing
-     case mb_templ1 of
+     mb_templ2 <- case mb_templ1 of
          Just (templ1, incl) ->
-             return (templ1, [incl])
+             return $ Just (templ1, [incl])
          Nothing -> do
              templ2 <- getDataFileName "template-hsc.h"
              exists2 <- doesFileExist templ2
-             if exists2 then return (templ2, [])
-                        else die ("No template specified, and template-hsc.h not located.\n\n" ++ usage)
+             if exists2
+                then return $ Just (templ2, [])
+                else return Nothing
+     case mb_templ2 of
+         Just x -> return x
+#if defined(IN_GHC_TREE)
+         Nothing -> do
+             -- XXX: this will *not* work on windows for symlinks, until `getExecutablePath` in `base` is
+             --      fixed. The alternative would be to bring the whole logic from the SysTools module in here
+             --      which is rather excessive. See Trac #14483.
+             let getBaseDir = Just . (\p -> p </> "lib") . takeDirectory . takeDirectory <$> getExecutablePath
+             mb_templ3 <- fmap (</> "template-hsc.h") <$> getBaseDir
+             mb_exists3 <- mapM doesFileExist mb_templ3
+             case (mb_templ3, mb_exists3) of
+                 (Just templ3, Just True) -> return (templ3, [])
+                 _ -> die ("No template specified, and template-hsc.h not located.\n\n" ++ usage)
+#else
+         Nothing -> die ("No template specified, and template-hsc.h not located.\n\n" ++ usage)
+#endif
 
 findCompiler :: Maybe FilePath -> ConfigM Maybe -> IO FilePath
 findCompiler mb_libdir config
