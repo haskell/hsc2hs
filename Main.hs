@@ -23,11 +23,6 @@ import System.Console.GetOpt
 -- XXX: Note this does not work
 --      on windows due to for
 --      symlinks. See Trac #14483.
-#if defined(IN_GHC_TREE)
-# if !MIN_VERSION_ghc_boot(8,3,0)
-#  error the impossible happened
-# endif
-#endif
 
 #if defined(mingw32_HOST_OS)
 import Foreign
@@ -45,10 +40,8 @@ import System.Directory         ( getCurrentDirectory )
 import Paths_hsc2hs as Main     ( getDataFileName )
 #endif
 #if defined(IN_GHC_TREE)
-import System.Directory         ( takeDirectory )
 import System.Environment       ( getExecutablePath )
-import System.FilePath          ( (</>) )
-
+import System.FilePath          ( takeDirectory, (</>) )
 #endif
 
 import Common

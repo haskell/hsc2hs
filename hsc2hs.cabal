@@ -56,9 +56,5 @@ Executable hsc2hs
                    filepath   >= 1   && < 1.5,
                    process    >= 1.1 && < 1.7
     if flag(in-ghc-tree)
-       if impl(ghc>=8.3)
-          cpp-options: -DIN_GHC_TREE
-          -- use @getBaseDir@ from ghc-boot to locate
-          -- the template-hsc.h file.
-          build-depends: ghc-boot >= 8.3 && < 8.5
+       cpp-options: -DIN_GHC_TREE
 
