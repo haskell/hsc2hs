@@ -307,7 +307,7 @@ outValidityCheck viaAsm s@(Special pos key value) uniq =
         case parseEnum value of
             Nothing -> ""
             Just (_,_,enums) | viaAsm ->
-                concatMap (\(hName,cName) -> validConstTestViaAsm (fromMaybe "noKey" (ATT.trim <$> hName) ++ show uniq) cName) enums
+                concatMap (\(hName,cName) -> validConstTestViaAsm (fromMaybe "noKey" (ATT.trim `fmap` hName) ++ show uniq) cName) enums
             Just (_,_,enums) ->
                 "void _hsc2hs_test" ++ show uniq ++ "()\n{\n" ++
                 concatMap (\(_,cName) -> validConstTest cName) enums ++
@@ -601,7 +601,7 @@ runCompileExtract k testStr = do
                   (["-S", "-c", cFile, "-o", sFile] ++ [f | CompFlag f <- flags])
                   (Just stdout)
       asm <- liftTestIO $ ATT.parse sFile
-      case (== 1) <$> ATT.lookupInteger (k ++ "___signed___") asm of
+      case (== 1) `fmap` (ATT.lookupInteger (k ++ "___signed___") asm) of
         Just False -> return $ fromMaybe (error "Failed to extract unsigned integer") (ATT.lookupUInteger k asm)
         Just True  -> return $ fromMaybe (error "Failed to extract integer") (ATT.lookupInteger k asm)
         Nothing    -> error "Failed to extract integer sign information"
