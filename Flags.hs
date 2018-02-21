@@ -18,6 +18,7 @@ data ConfigM m = Config {
                      cKeepFiles :: Bool,
                      cNoCompile :: Bool,
                      cCrossCompile :: Bool,
+                     cViaAsm :: Bool,
                      cCrossSafe :: Bool,
                      cColumn :: Bool,
                      cVerbose :: Bool,
@@ -41,6 +42,7 @@ emptyMode = UseConfig $ Config {
                             cKeepFiles    = False,
                             cNoCompile    = False,
                             cCrossCompile = False,
+                            cViaAsm       = False,
                             cCrossSafe    = False,
                             cColumn       = False,
                             cVerbose      = False,
@@ -79,6 +81,8 @@ options = [
         "stop after writing *_hsc_make.c",
     Option ['x'] ["cross-compile"] (NoArg (withConfig $ setCrossCompile True))
         "activate cross-compilation mode",
+    Option [] ["via-asm"] (NoArg (withConfig $ setViaAsm True))
+        "use a crude asm parser to compute constants when cross compiling",
     Option [] ["cross-safe"] (NoArg (withConfig $ setCrossSafe True))
         "restrict .hsc directives to those supported by --cross-compile",
     Option ['k'] ["keep-files"] (NoArg (withConfig $ setKeepFiles True))
@@ -123,6 +127,9 @@ setNoCompile b c = c { cNoCompile = b }
 
 setCrossCompile :: Bool -> ConfigM Maybe -> ConfigM Maybe
 setCrossCompile b c = c { cCrossCompile = b }
+
+setViaAsm :: Bool -> ConfigM Maybe -> ConfigM Maybe
+setViaAsm b c = c { cViaAsm = b }
 
 setCrossSafe :: Bool -> ConfigM Maybe -> ConfigM Maybe
 setCrossSafe b c = c { cCrossSafe = b }

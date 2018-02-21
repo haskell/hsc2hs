@@ -109,6 +109,7 @@ processFiles configM files usage = do
                      cKeepFiles    = cKeepFiles configM,
                      cNoCompile    = cNoCompile configM,
                      cCrossCompile = cCrossCompile configM,
+                     cViaAsm       = cViaAsm configM,
                      cCrossSafe    = cCrossSafe configM,
                      cColumn       = cColumn configM,
                      cVerbose      = cVerbose configM,

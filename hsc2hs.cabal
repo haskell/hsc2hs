@@ -45,6 +45,7 @@ Executable hsc2hs
         DirectCodegen
         Flags
         HSCParser
+        ATTParser
         UtilsCodegen
         Paths_hsc2hs
 
