@@ -14,7 +14,6 @@
 
 module ATTParser where
 
-import Data.Functor ((<$>))
 import Control.Applicative ((<|>))
 import Data.Word (Word)
 
@@ -22,7 +21,7 @@ type ASM = [(String, [(String, String)])]
 
 parse :: FilePath -> IO ASM
 parse f = do
-  lns <- lines <$> readFile f
+  lns <- lines `fmap` readFile f
   return $ foldl parseLine [] lns
 
   where parseLine :: ASM -> String -> ASM
@@ -37,14 +36,14 @@ trim = reverse . dropWhile (`elem` " \t") . reverse . dropWhile (`elem` " \t")
 -- | lookup a constant numeric value. Drop any comments indicated by ';', '#' or '@'.
 -- We assume the value is either in the `.long` or `.quad` attribute.
 lookupConst :: String -> ASM -> Maybe String
-lookupConst key asm = lookup key asm >>= \x -> (trim . takeWhile (`notElem` ";#@") <$> (lookup ".long" x <|> lookup ".quad" x))
+lookupConst key asm = lookup key asm >>= \x -> ((trim . takeWhile (`notElem` ";#@")) `fmap` (lookup ".long" x <|> lookup ".quad" x))
                                                -- the compiler may emit something like `.space 4` to indicate 0000.
-                                               <|> (const "0" <$> lookup ".space" x)
+                                               <|> (const "0" `fmap` lookup ".space" x)
 
 -- | extract a C String in the most basic sense we can.
 -- the .asciz directive doesn't contain the \0 terminator.
 lookupASCII :: String -> ASM -> Maybe String
-lookupASCII key asm = lookup key asm >>= \x -> read <$> lookup ".ascii" x <|> ((++ "\0") . read <$> lookup ".asciz" x)
+lookupASCII key asm = lookup key asm >>= \x -> read `fmap` (lookup ".ascii" x) <|> (((++ "\0") . read) `fmap` (lookup ".asciz" x))
 
 lookupInt :: String -> ASM -> Maybe Int
 lookupInt key = fmap read . lookupConst key
