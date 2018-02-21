@@ -14,6 +14,7 @@
 
 module ATTParser where
 
+import Data.Functor ((<$>))
 import Control.Applicative ((<|>))
 
 type ASM = [(String, [(String, String)])]
