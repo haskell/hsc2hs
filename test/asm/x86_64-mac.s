@@ -32,7 +32,7 @@ _z:
 
 	.section	__TEXT,__cstring,cstring_literals
 L_.str:                                 ## @.str
-	.asciz	"Hello World\"\n"
+	.asciz	"Hello World\" 12345"
 
 	.section	__DATA,__data
 	.globl	_t                      ## @t

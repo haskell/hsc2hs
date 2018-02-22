@@ -24,7 +24,7 @@ main = hspec $ do
           lookupInteger "z" x `shouldBe` (Just (-1))
 
         it "t should be \"Hello World\\\"\\n\\0\"" $ do
-          lookupString "t" x `shouldBe` (Just "Hello World\"\n\0")
+          lookupString "t" x `shouldBe` (Just "Hello World\" 12345\0")
 
     forM_ [("arm ios",      "test/asm/arm-ios.s")
           ,("arm linux",    "test/asm/arm.s")
@@ -41,6 +41,6 @@ main = hspec $ do
           lookupInteger "z" x `shouldBe` (Just (-1))
 
         it "t should be \"Hello World\\\"\\n\\0\"" $ do
-          lookupString "t" x `shouldBe` (Just "Hello World\"\n\0")
+          lookupString "t" x `shouldBe` (Just "Hello World\" 12345\0")
 
 

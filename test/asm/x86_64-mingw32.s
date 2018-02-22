@@ -36,7 +36,7 @@ z:
 	.globl	t
 	.section .rdata,"dr"
 .LC0:
-	.ascii "Hello World\"\12\0"
+	.ascii "Hello World\" 12345\0"
 	.data
 	.align 8
 t:

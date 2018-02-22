@@ -24,4 +24,4 @@ unsigned long long z___hsc2hs_sign___ = Y < 0;
 unsigned long long z = (unsigned long long)Y;
 
 extern char * t;
-char * t = "Hello World\"\n";
+char * t = "Hello World\" 12345";

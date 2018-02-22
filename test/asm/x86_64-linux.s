@@ -57,8 +57,8 @@ z:
 	.type	.L.str,@object          # @.str
 	.section	.rodata.str1.1,"aMS",@progbits,1
 .L.str:
-	.asciz	"Hello World\"\n"
-	.size	.L.str, 14
+	.asciz	"Hello World\" 12345"
+	.size	.L.str, 19
 
 	.type	t,@object               # @t
 	.data
