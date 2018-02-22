@@ -583,10 +583,12 @@ runCompileAsmIntegerTest (ZCursor s@(Special _ _ value) above below) = do
                (concatMap outHeaderCProg' above) ++
                outHeaderCProg' s ++
                -- the test
-               "extern int " ++ key ++ "___signed___;\n" ++
-               "int " ++ key ++ "___signed___ = (" ++ value ++ ") < 0;\n" ++
-               "extern long long " ++ key ++ ";\n" ++
-               "long long " ++ key ++ " = (" ++ value ++ ");\n"++
+               "extern unsigned long long ___hsc2hs_BOM___;\n" ++
+               "unsigned long long ___hsc2hs_BOM___ = 0x100000000;\n" ++
+               "extern unsigned long long " ++ key ++ "___hsc2hs_sign___;\n" ++
+               "unsigned long long " ++ key ++ "___hsc2hs_sign___ = (" ++ value ++ ") < 0;\n" ++
+               "extern unsigned long long " ++ key ++ ";\n" ++
+               "unsigned long long " ++ key ++ " = (" ++ value ++ ");\n"++
                (concatMap outHeaderCProg' below)
     runCompileExtract key test
 runCompileAsmIntegerTest _ = error "runCompileAsmIntegerTestargument isn't a Special"
@@ -601,10 +603,7 @@ runCompileExtract k testStr = do
                   (["-S", "-c", cFile, "-o", sFile] ++ [f | CompFlag f <- flags])
                   (Just stdout)
       asm <- liftTestIO $ ATT.parse sFile
-      case (== 1) `fmap` (ATT.lookupInteger (k ++ "___signed___") asm) of
-        Just False -> return $ fromMaybe (error "Failed to extract unsigned integer") (ATT.lookupUInteger k asm)
-        Just True  -> return $ fromMaybe (error "Failed to extract integer") (ATT.lookupInteger k asm)
-        Nothing    -> error "Failed to extract integer sign information"
+      return $ fromMaybe (error "Failed to extract integer") (ATT.lookupInteger k asm)
 
 runCompileTest :: String -> TestMonad Bool
 runCompileTest testStr = do

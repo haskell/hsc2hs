@@ -15,44 +15,108 @@
 module ATTParser where
 
 import Control.Applicative ((<|>))
-import Data.Word (Word)
+import Data.Word (Word32, Word64)
+import Data.Int (Int64)
+import Data.Char (isDigit, isSpace)
+import Data.Bits (shiftL, shiftR, (.|.))
+import Data.Maybe (fromMaybe)
 
-type ASM = [(String, [(String, String)])]
+data Inst = Ident String
+          | Long Word32
+          | Quad Word64
+          | Ref String
+          | Ascii String
+          deriving Show
 
-parse :: FilePath -> IO ASM
-parse f = do
-  lns <- lines `fmap` readFile f
-  return $ foldl parseLine [] lns
+type ASM = [(String, Inst)]
 
-  where parseLine :: ASM -> String -> ASM
-        parseLine [] ('\t':_) = []
-        parseLine ((ident,attr):xs) ('\t':line) = let (key, val) = span (`notElem` " \t") line
-                                                  in (ident,(key,trim val):attr):xs
-        parseLine xs line = let ident = takeWhile (/= ':') line in (ident,[]):xs
+isIdent :: Inst -> Bool
+isIdent (Ident _) = True
+isIdent _ = False
 
 trim :: String -> String
 trim = reverse . dropWhile (`elem` " \t") . reverse . dropWhile (`elem` " \t")
+-- | generalized @words@.
+words' :: (a -> Bool) -> [a] -> [[a]]
+words' p s = case dropWhile p s of
+             [] -> []
+             s' -> w : words' p s''
+                   where (w, s'') = break p s'
 
--- | lookup a constant numeric value. Drop any comments indicated by ';', '#' or '@'.
--- We assume the value is either in the `.long` or `.quad` attribute.
-lookupConst :: String -> ASM -> Maybe String
-lookupConst key asm = lookup key asm >>= \x -> ((trim . takeWhile (`notElem` ";#@")) `fmap` (lookup ".long" x <|> lookup ".quad" x))
-                                               -- the compiler may emit something like `.space 4` to indicate 0000.
-                                               <|> (const "0" `fmap` lookup ".space" x)
+isNumber :: String -> Bool
+isNumber ('-':x) = all isDigit x
+isNumber ('+':x) = all isDigit x
+isNumber x       = all isDigit x
 
--- | extract a C String in the most basic sense we can.
--- the .asciz directive doesn't contain the \0 terminator.
-lookupASCII :: String -> ASM -> Maybe String
-lookupASCII key asm = lookup key asm >>= \x -> read `fmap` (lookup ".ascii" x) <|> (((++ "\0") . read) `fmap` (lookup ".asciz" x))
+-- | process the assembly instructions, filtering out
+-- identifiers and constant values.
+preprocess :: String -> [Inst]
+preprocess [] = []
+preprocess ('\t':attr) = let (h, t) = break isSpace attr
+                         in case h:words' (=='\t') t of
+                         (".quad":x:_) | isNumber (w x) -> [Quad $ read (w x)]
+                                       | otherwise      -> [Ref  $ (w x)]
+                         (".xword":x:_)| isNumber (w x) -> [Quad $ read (w x)]
+                                       | otherwise      -> [Ref  $ (w x)]
+                         (".long":x:_) | isNumber (w x) -> [Long $ read (w x)]
+                                       | otherwise      -> [Ref  $ (w x)]
+                         (".space":x:_)| (w x) == "4"   -> [Long 0]
+                                       | (w x) == "8"   -> [Quad 0]
+                         (".ascii":x:_)             -> [Ascii $ read x]
+                         (".asciz":x:_)             -> [Ascii $ read x ++ "\0"]
+                         _                          -> []
+  where w = head . words
+preprocess ('.':'z':'e':'r':'o':'f':'i':'l':'l':' ':x) = case words' (==',') x of
+      (_seg:_sect:sym:size:_) | size == "4" -> [Ident sym, Long 0]
+                              | size == "8" -> [Ident sym, Quad 0]
+      _ -> []
+preprocess (c:cs) | not (isSpace c) = [Ident $ takeWhile (/= ':') (c:cs)]
+                  | otherwise       = []
 
-lookupInt :: String -> ASM -> Maybe Int
-lookupInt key = fmap read . lookupConst key
+-- | turn the list of instructions into an associated list
+parseInsts :: [Inst] -> [(String, Inst)]
+parseInsts [] = []
+parseInsts (Ident name:xs) = case break isIdent xs of
+  ([], xs') -> parseInsts xs'
+  (is, xs') -> (name, combineInst is):parseInsts xs'
+parseInsts _ = error "Invalid instructions"
 
-lookupInteger :: String -> ASM -> Maybe Integer
-lookupInteger key = fmap read . lookupConst key
+-- | combine instructions (e.g. two long into a quad)
+combineInst :: [Inst] -> Inst
+combineInst [Quad i] = Quad i
+combineInst [Long i] = Quad (fromIntegral i)
+combineInst [Long h, Long l] = Quad $ (shiftL (fromIntegral h) 32) .|. fromIntegral l
+combineInst [Ref s]  = Ref s
+combineInst [Ascii s] = Ascii s
+combineInst is = error $ "Cannot combine instructions: " ++ show is
 
-lookupUInteger :: String -> ASM -> Maybe Integer
-lookupUInteger key = fmap (fromIntegral . (read :: String -> Word)) . lookupConst key
+-- | inline references
+inlineRef :: [(String, Inst)] -> [(String, Inst)]
+inlineRef xs = map go xs
+  where go (k, Ref name) = (k, fromMaybe (error $ "failed to find reference " ++ show name) $ lookup name xs)
+        go x = x
 
-lookupCString :: String -> ASM -> Maybe String
-lookupCString key asm = lookupConst key asm >>= flip lookupASCII asm
+fixWordOrder :: [(String, Inst)] -> [(String, Inst)]
+fixWordOrder xs = case lookupInteger "___hsc2hs_BOM___" xs of
+  Just 1 -> map go xs
+  _ -> xs
+  where go (k, Quad w) = (k, Quad $ shiftL w 32 .|. shiftR w 32)
+        go x = x
+
+parse :: FilePath -> IO [(String, Inst)]
+parse f = (fixWordOrder . inlineRef . parseInsts . concatMap preprocess . lines) `fmap` readFile f
+
+-- | lookup a symbol without or with underscore prefix
+lookup_ :: String -> [(String,b)] -> Maybe b
+lookup_ k l = lookup k l <|> lookup ("_" ++ k) l
+
+lookupString :: String -> [(String, Inst)] -> Maybe String
+lookupString k l = case (lookup_ k l) of
+  Just (Ascii s) -> Just s
+  _ -> Nothing
+
+lookupInteger :: String -> [(String, Inst)] -> Maybe Integer
+lookupInteger k l = case (lookup_ k l, lookup_ (k ++ "___hsc2hs_sign___") l) of
+  (Just (Quad i), Just (Quad 1)) -> Just (fromIntegral (fromIntegral i :: Int64))
+  (Just (Quad i), _) -> Just (fromIntegral i)
+  _ -> Nothing
