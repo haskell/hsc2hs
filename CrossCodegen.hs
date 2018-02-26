@@ -40,6 +40,8 @@ import Common
 import Flags
 import HSCParser
 
+import qualified ATTParser as ATT
+
 -- A monad over IO for performing tests; keeps the commandline flags
 -- and a state counter for unique filename generation.
 -- equivalent to ErrorT String (StateT Int (ReaderT TestMonadEnv IO))
@@ -219,8 +221,7 @@ outputSpecial output (z@ZCursor {zCursor=Special pos@(SourcePos file line _)  ke
        "const" -> outputConst value show >> return False
        "offset" -> outputConst ("offsetof(" ++ value ++ ")") (\i -> "(" ++ show i ++ ")") >> return False
        "size" -> outputConst ("sizeof(" ++ value ++ ")") (\i -> "(" ++ show i ++ ")") >> return False
-       "alignment" -> outputConst (alignment value)
-                                  (\i -> "(" ++ show i ++ ")") >> return False
+       "alignment" -> outputConst (alignment value) show >> return False
        "peek" -> outputConst ("offsetof(" ++ value ++ ")")
                              (\i -> "(\\hsc_ptr -> peekByteOff hsc_ptr " ++ show i ++ ")") >> return False
        "poke" -> outputConst ("offsetof(" ++ value ++ ")")
@@ -271,19 +272,21 @@ checkValidity input = do
     flags <- testGetFlags
     let test = outTemplateHeaderCProg (cTemplate config) ++
                concatMap outFlagHeaderCProg flags ++
-               concatMap (uncurry outValidityCheck) (zip input [0..])
+               concatMap (uncurry (outValidityCheck (cViaAsm config))) (zip input [0..])
     testLog ("checking for compilation errors") $ do
         success <- makeTest2 (".c",".o") $ \(cFile,oFile) -> do
             liftTestIO $ writeBinaryFile cFile test
             compiler <- testGetCompiler
             runCompiler compiler
-                        (["-c",cFile,"-o",oFile]++[f | CompFlag f <- flags])
+                        (["-S" | cViaAsm config ]++
+                         ["-c",cFile,"-o",oFile]++
+                         [f | CompFlag f <- flags])
                         Nothing
         when (not success) $ testFail' "compilation failed"
     testLog' "compilation is error-free"
 
-outValidityCheck :: Token -> Int -> String
-outValidityCheck s@(Special pos key value) uniq =
+outValidityCheck :: Bool -> Token -> Int -> String
+outValidityCheck viaAsm s@(Special pos key value) uniq =
     case key of
        "const" -> checkValidConst value
        "offset" -> checkValidConst ("offsetof(" ++ value ++ ")")
@@ -296,20 +299,26 @@ outValidityCheck s@(Special pos key value) uniq =
        "enum" -> checkValidEnum
        _ -> outHeaderCProg' s
     where
-    checkValidConst value' = "void _hsc2hs_test" ++ show uniq ++ "()\n{\n" ++ validConstTest value' ++ "}\n";
+    checkValidConst value' = if viaAsm
+                             then validConstTestViaAsm (show uniq) value' ++ "\n"
+                             else "void _hsc2hs_test" ++ show uniq ++ "()\n{\n" ++ validConstTest value' ++ "}\n"
     checkValidType = "void _hsc2hs_test" ++ show uniq ++ "()\n{\n" ++ outCLine pos ++ "    (void)(" ++ value ++ ")1;\n}\n";
     checkValidEnum =
         case parseEnum value of
             Nothing -> ""
+            Just (_,_,enums) | viaAsm ->
+                concatMap (\(hName,cName) -> validConstTestViaAsm (fromMaybe "noKey" (ATT.trim `fmap` hName) ++ show uniq) cName) enums
             Just (_,_,enums) ->
                 "void _hsc2hs_test" ++ show uniq ++ "()\n{\n" ++
                 concatMap (\(_,cName) -> validConstTest cName) enums ++
                 "}\n"
 
     -- we want this to fail if the value is syntactically invalid or isn't a constant
-    validConstTest value' = outCLine pos ++ "    {\n        static int test_array[(" ++ value' ++ ") > 0 ? 2 : 1];\n        (void)test_array;\n    }\n";
+    validConstTest value' = outCLine pos ++ "    {\n        static int test_array[(" ++ value' ++ ") > 0 ? 2 : 1];\n        (void)test_array;\n    }\n"
+    validConstTestViaAsm name value' = outCLine pos ++ "\nextern long long _hsc2hs_test_" ++ name ++";\n"
+                                                    ++ "long long _hsc2hs_test_" ++ name ++ " = (" ++ value' ++ ");\n"
 
-outValidityCheck (Text _ _) _ = ""
+outValidityCheck _ (Text _ _) _ = ""
 
 -- Skips over some #if or other conditional that we found to be false.
 -- I.e. the argument should be a zipper whose cursor is one past the #if,
@@ -365,13 +374,16 @@ cShowCmpTest (LessOrEqual x) = "<=" ++ cShowInteger x
 -- Determines the value of SOME_VALUE using binary search; this
 -- is a trick which is cribbed from autoconf's AC_COMPUTE_INT.
 computeConst :: ZCursor Token -> String -> TestMonad Integer
-computeConst zOrig@(ZCursor (Special pos _ _) _ _) value = do
+computeConst zOrig@(ZCursor (Special pos _ _) _ _) value =
     testLogAtPos pos ("computing " ++ value) $ do
-        nonNegative <- compareConst z (GreaterOrEqual (Signed 0))
-        integral <- checkValueIsIntegral z nonNegative
-        when (not integral) $ testFail pos $ value ++ " is not an integer"
-        (lower,upper) <- bracketBounds z nonNegative
-        int <- binarySearch z nonNegative lower upper
+        config <- testGetConfig
+        int <- case cViaAsm config of
+                 True -> runCompileAsmIntegerTest z
+                 False -> do nonNegative <- compareConst z (GreaterOrEqual (Signed 0))
+                             integral <- checkValueIsIntegral z nonNegative
+                             when (not integral) $ testFail pos $ value ++ " is not an integer"
+                             (lower,upper) <- bracketBounds z nonNegative
+                             binarySearch z nonNegative lower upper
         testLog' $ "result: " ++ show int
         return int
     where -- replace the Special's value with the provided value; e.g. the special
@@ -559,6 +571,39 @@ runCompileBooleanTest (ZCursor s above below) booleanTest = do
                "}\n" ++
                (concatMap outHeaderCProg' below)
     runCompileTest test
+
+runCompileAsmIntegerTest :: ZCursor Token -> TestMonad Integer
+runCompileAsmIntegerTest (ZCursor s@(Special _ _ value) above below) = do
+    config <- testGetConfig
+    flags <- testGetFlags
+    let key = "___hsc2hs_int_test"
+    let test = -- all the surrounding code
+               outTemplateHeaderCProg (cTemplate config) ++
+               (concatMap outFlagHeaderCProg flags) ++
+               (concatMap outHeaderCProg' above) ++
+               outHeaderCProg' s ++
+               -- the test
+               "extern unsigned long long ___hsc2hs_BOM___;\n" ++
+               "unsigned long long ___hsc2hs_BOM___ = 0x100000000;\n" ++
+               "extern unsigned long long " ++ key ++ "___hsc2hs_sign___;\n" ++
+               "unsigned long long " ++ key ++ "___hsc2hs_sign___ = (" ++ value ++ ") < 0;\n" ++
+               "extern unsigned long long " ++ key ++ ";\n" ++
+               "unsigned long long " ++ key ++ " = (" ++ value ++ ");\n"++
+               (concatMap outHeaderCProg' below)
+    runCompileExtract key test
+runCompileAsmIntegerTest _ = error "runCompileAsmIntegerTestargument isn't a Special"
+
+runCompileExtract :: String -> String -> TestMonad Integer
+runCompileExtract k testStr = do
+    makeTest3 (".c", ".s", ".txt") $ \(cFile, sFile, stdout) -> do
+      liftTestIO $ writeBinaryFile cFile testStr
+      flags <- testGetFlags
+      compiler <- testGetCompiler
+      _ <- runCompiler compiler
+                  (["-S", "-c", cFile, "-o", sFile] ++ [f | CompFlag f <- flags])
+                  (Just stdout)
+      asm <- liftTestIO $ ATT.parse sFile
+      return $ fromMaybe (error "Failed to extract integer") (ATT.lookupInteger k asm)
 
 runCompileTest :: String -> TestMonad Bool
 runCompileTest testStr = do

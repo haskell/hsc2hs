@@ -45,6 +45,7 @@ Executable hsc2hs
         DirectCodegen
         Flags
         HSCParser
+        ATTParser
         UtilsCodegen
         Paths_hsc2hs
 
@@ -58,3 +59,13 @@ Executable hsc2hs
     if flag(in-ghc-tree)
        cpp-options: -DIN_GHC_TREE
 
+test-suite spec
+  main-is:           Spec.hs
+  hs-source-dirs:    .
+  other-modules:     ATTParser
+  ghc-options:       -Wall -threaded
+  type:              exitcode-stdio-1.0
+  build-depends:       base
+                     , tasty
+                     , tasty-hspec
+  default-language: Haskell2010
