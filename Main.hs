@@ -37,7 +37,8 @@ import System.IO
 #ifdef BUILD_NHC
 import System.Directory         ( getCurrentDirectory )
 #else
-import Paths_hsc2hs as Main     ( getDataFileName )
+import Paths_hsc2hs as Main     ( getDataFileName, version )
+import Data.Version             ( showVersion )
 #endif
 #if defined(IN_GHC_TREE)
 import System.Environment       ( getExecutablePath )
@@ -66,7 +67,7 @@ getDataFileName s = do here <- getCurrentDirectory
 #endif
 
 versionString :: String
-versionString = "hsc2hs version " ++ CURRENT_PACKAGE_VERSION ++ "\n"
+versionString = "hsc2hs version " ++ showVersion version ++ "\n"
 
 main :: IO ()
 main = do
