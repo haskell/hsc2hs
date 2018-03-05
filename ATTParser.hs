@@ -92,6 +92,11 @@ preprocess ('\t':attr) = let (h, t) = break isSpace attr
 
                          (".ascii":x:_)             -> [mkAscii $ read x]
                          (".asciz":x:_)             -> [mkAscii $ read x ++ "\0"]
+                         -- found on nios, sh4, alpha, mk68k; all without \0.
+                         (".string":x:_)            -> [mkAscii $ read x ++ "\0"]
+                         -- found on hppa
+                         (".stringz":x:_)           -> [mkAscii $ read x ++ "\0"]
+                         -- ia64
                          ("stringz":x:_)            -> [mkAscii $ read x ++ "\0"]
                          _                          -> []
   where w = head . words
