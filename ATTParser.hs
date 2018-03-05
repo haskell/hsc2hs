@@ -54,14 +54,21 @@ preprocess :: String -> [Inst]
 preprocess [] = []
 preprocess ('\t':attr) = let (h, t) = break isSpace attr
                          in case h:words' (=='\t') t of
+                         -- 8 byte values
                          (".quad":x:_) | isNumber (w x) -> [Quad $ read (w x)]
                                        | otherwise      -> [Ref  $ (w x)]
                          (".xword":x:_)| isNumber (w x) -> [Quad $ read (w x)]
                                        | otherwise      -> [Ref  $ (w x)]
+                         (".8byte":x:_)| isNumber (w x) -> [Quad $ read (w x)]
+                                       | otherwise      -> [Ref  $ (w x)]
+                         -- 4 byte values
                          (".long":x:_) | isNumber (w x) -> [Long $ read (w x)]
                                        | otherwise      -> [Ref  $ (w x)]
                          (".word":x:_) | isNumber (w x) -> [Long $ read (w x)]
                                        | otherwise      -> [Ref  $ (w x)]
+                         (".4byte":x:_)| isNumber (w x) -> [Long $ read (w x)]
+                                       | otherwise      -> [Ref  $ (w x)]
+
                          (".space":x:_)| (w x) == "4"   -> [Long 0]
                                        | (w x) == "8"   -> [Quad 0]
                          (".ascii":x:_)             -> [Ascii $ read x]
