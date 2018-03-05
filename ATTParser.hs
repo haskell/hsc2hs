@@ -61,6 +61,9 @@ preprocess ('\t':attr) = let (h, t) = break isSpace attr
                                        | otherwise      -> [Ref  $ (w x)]
                          (".8byte":x:_)| isNumber (w x) -> [Quad $ read (w x)]
                                        | otherwise      -> [Ref  $ (w x)]
+                         ("data8":x:_) | isNumber (w x) -> [Quad $ read (w x)]
+                                       | otherwise      -> [Ref  $ (w x)]
+
                          -- 4 byte values
                          (".long":x:_) | isNumber (w x) -> [Long $ read (w x)]
                                        | otherwise      -> [Ref  $ (w x)]
@@ -71,8 +74,12 @@ preprocess ('\t':attr) = let (h, t) = break isSpace attr
 
                          (".space":x:_)| (w x) == "4"   -> [Long 0]
                                        | (w x) == "8"   -> [Quad 0]
+                         (".skip":x:_) | (w x) == "4"   -> [Long 0]
+                                       | (w x) == "8"   -> [Quad 0]
+
                          (".ascii":x:_)             -> [Ascii $ read x]
                          (".asciz":x:_)             -> [Ascii $ read x ++ "\0"]
+                         ("stringz":x:_)            -> [Ascii $ read x ++ "\0"]
                          _                          -> []
   where w = head . words
 preprocess ('.':'z':'e':'r':'o':'f':'i':'l':'l':' ':x) = case words' (==',') x of
