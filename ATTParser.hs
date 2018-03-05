@@ -60,6 +60,8 @@ preprocess ('\t':attr) = let (h, t) = break isSpace attr
                                        | otherwise      -> [Ref  $ (w x)]
                          (".long":x:_) | isNumber (w x) -> [Long $ read (w x)]
                                        | otherwise      -> [Ref  $ (w x)]
+                         (".word":x:_) | isNumber (w x) -> [Long $ read (w x)]
+                                       | otherwise      -> [Ref  $ (w x)]
                          (".space":x:_)| (w x) == "4"   -> [Long 0]
                                        | (w x) == "8"   -> [Quad 0]
                          (".ascii":x:_)             -> [Ascii $ read x]
