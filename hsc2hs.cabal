@@ -6,7 +6,7 @@ License-File: LICENSE
 Author: Marcin Kowalczyk <qrczak@knm.org.pl>
 Maintainer: ghc-devs@haskell.org
 Synopsis: A preprocessor that helps with writing Haskell bindings to C code
-Bug-Reports: https://ghc.haskell.org/trac/ghc/newticket?component=hsc2hs
+Bug-Reports: https://github.com/haskell/hsc2hs/issues
 Description:
     The hsc2hs program can be used to automate some parts of the
     process of writing Haskell bindings to C code.  It reads an
@@ -36,7 +36,7 @@ flag in-ghc-tree
 
 source-repository head
     Type: git
-    Location: http://git.haskell.org/hsc2hs.git
+    Location: https://github.com/haskell/hsc2hs.git
 
 Executable hsc2hs
     Default-Language: Haskell2010
