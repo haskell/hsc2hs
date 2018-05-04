@@ -44,6 +44,9 @@ import Data.Version             ( showVersion )
 import System.Environment       ( getExecutablePath )
 import System.FilePath          ( takeDirectory, (</>) )
 #endif
+#if MIN_VERSION_base(4,12,0)
+import GHC.ResponseFile         ( getArgsWithResponseFiles )
+#endif
 
 import Common
 import CrossCodegen
@@ -74,7 +77,11 @@ main = do
     prog <- getProgramName
     let header = "Usage: "++prog++" [OPTIONS] INPUT.hsc [...]\n"
         usage = usageInfo header options
+#if MIN_VERSION_base(4,12,0)
+    args <- getArgsWithResponseFiles
+#else
     args <- getArgs
+#endif
     let (fs, files, errs) = getOpt Permute options args
     let mode = foldl (.) id fs emptyMode
     case mode of
