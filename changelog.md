@@ -1,3 +1,8 @@
+## next
+
+ - Add support to read command line arguments supplied via response files
+   ([#13896](https://ghc.haskell.org/trac/ghc/ticket/13388))
+
 ## 0.68.2
 
  - Support GHC 8.2.1
