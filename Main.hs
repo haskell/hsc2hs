@@ -29,7 +29,7 @@ import Foreign
 import Foreign.C.String
 #endif
 import System.Directory         ( doesFileExist, findExecutable )
-import System.Environment       ( getProgName, getArgs )
+import System.Environment       ( getProgName )
 import System.Exit              ( ExitCode(..), exitWith )
 import System.FilePath          ( normalise, splitFileName, splitExtension )
 import System.IO
@@ -46,6 +46,8 @@ import System.FilePath          ( takeDirectory, (</>) )
 #endif
 #if MIN_VERSION_base(4,12,0)
 import GHC.ResponseFile         ( getArgsWithResponseFiles )
+#else
+import GHC.Environment          ( getArgs )
 #endif
 
 import Common
