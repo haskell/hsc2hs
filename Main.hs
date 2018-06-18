@@ -47,7 +47,7 @@ import System.FilePath          ( takeDirectory, (</>) )
 #if MIN_VERSION_base(4,12,0)
 import GHC.ResponseFile         ( getArgsWithResponseFiles )
 #else
-import GHC.Environment          ( getArgs )
+import System.Environment       ( getArgs )
 #endif
 
 import Common
