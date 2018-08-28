@@ -1,4 +1,4 @@
-## next
+## 0.68.4
 
  - Add support to read command line arguments supplied via response files
    ([#13896](https://ghc.haskell.org/trac/ghc/ticket/13388))
