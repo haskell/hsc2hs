@@ -1,6 +1,6 @@
 cabal-version: >=1.10
 Name: hsc2hs
-Version: 0.68.4
+Version: 0.68.4.1
 
 Copyright: 2000, Marcin Kowalczyk
 License: BSD3
@@ -51,6 +51,7 @@ Executable hsc2hs
         HSCParser
         ATTParser
         UtilsCodegen
+        Compat.ResponseFile
         Paths_hsc2hs
 
     Other-Extensions: CPP, NoMonomorphismRestriction
