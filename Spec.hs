@@ -7,11 +7,25 @@ import Control.Monad (forM_)
 main :: IO ()
 main = hspec $ do
   describe "asm parser" $ do
+    -- 64bit
     forM_ [("x86_64 linux", "test/asm/x86_64-linux.s")
           ,("x86_64 macos", "test/asm/x86_64-mac.s")
           ,("x86_64 mingw", "test/asm/x86_64-mingw32.s")
           ,("aarch64 ios",  "test/asm/aarch64-ios.s")
-          ,("aarch64 linux","test/asm/aarch64.s")]
+          ,("aarch64 linux","test/asm/aarch64.s")
+          ,("sparc64 linux","test/asm/sparc64-linux.s")
+          ,("mips64 linux", "test/asm/mips64-linux.s")
+          ,("powerpc64 linux","test/asm/powerpc64-linux.s")
+          ,("powerpc64le linux","test/asm/powerpc64le-linux.s")
+          ,("hppa linux",   "test/asm/hppa-linux.s")
+          ,("m68k linux",   "test/asm/m68k-linux.s")
+          ,("alpha linux",  "test/asm/alpha-linux.s")
+          ,("ia64 linux",   "test/asm/ia64-linux.s")
+          ,("nios2 linux",  "test/asm/nios2-linux.s")
+          ,("s390 linux",   "test/asm/s390-linux.s")
+          ,("s390x linux",  "test/asm/s390x-linux.s")
+          ,("sh4 linux",    "test/asm/sh4-linux.s")
+          ]
       $ \(d, f) ->do
       context d $ do
         x <- runIO $ parse f
@@ -25,10 +39,14 @@ main = hspec $ do
 
         it "t should be \"Hello World\\\"\\n\\0\"" $ do
           lookupString "t" x `shouldBe` (Just "Hello World\" 12345\0")
-
+    -- 32 bit
     forM_ [("arm ios",      "test/asm/arm-ios.s")
           ,("arm linux",    "test/asm/arm.s")
-          ,("x86 linux",    "test/asm/x86-linux.s")]
+          ,("x86 linux",    "test/asm/x86-linux.s")
+          ,("sparc linux",  "test/asm/sparc-linux.s")
+          ,("mips linux",   "test/asm/mips-linux.s")
+          ,("powerpc linux","test/asm/powerpc-linux.s")
+          ]
       $ \(d, f) ->do
       context d $ do
         x <- runIO $ parse f
