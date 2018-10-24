@@ -1,7 +1,10 @@
-## 0.68.4.1
+## 0.68.5
 
  - Support response files regardless of which GHC `hsc2hs` was compiled
    with ([#15758](https://ghc.haskell.org/trac/ghc/ticket/15758))
+
+ - Support for non-x86 platforms should be significantly more robust due to
+   improvements in `hsc2hs`'s assembly parser
 
 ## 0.68.4
 
