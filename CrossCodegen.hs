@@ -401,9 +401,9 @@ binarySearch z nonNegative l u = do
         mid = (l+u+1) `div` 2
     inTopHalf <- compareConst z (GreaterOrEqual $ (if nonNegative then Unsigned else Signed) mid)
     let (l',u') = if inTopHalf then (mid,u) else (l,(mid-1))
-    assert (l < mid && mid <= u &&             -- l < mid <= u
-            l <= l' && l' <= u' && u' <= u &&  -- l <= l' <= u' <= u
-            u'-l' < u-l)                       -- |u' - l'| < |u - l|
+    assert (l < mid && mid <= u &&             -- @l < mid <= u@
+            l <= l' && l' <= u' && u' <= u &&  -- @l <= l' <= u' <= u@
+            u'-l' < u-l)                       -- @|u' - l'| < |u - l|@
            (binarySearch z nonNegative l' u')
 
 -- Establishes bounds on the unknown integer. By searching increasingly
