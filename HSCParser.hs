@@ -98,6 +98,9 @@ anyChar_ = do
 any2Chars_ :: Parser ()
 any2Chars_ = anyChar_ >> anyChar_
 
+any3Chars_ :: Parser ()
+any3Chars_ = anyChar_ >> anyChar_ >> anyChar_
+
 many :: Parser a -> Parser [a]
 many p = many1 p `mplus` return []
 
@@ -159,12 +162,16 @@ text = do
                 _ -> do
                     return () `fakeOutput` unescapeHashes symb
                     text
-        '\"':_    -> do anyChar_; hsString '\"'; text
-        '\'':_    -> do anyChar_; hsString '\''; text
-        '{':'-':_ -> do any2Chars_; linePragma `mplus`
+        '\"':_        -> do anyChar_; hsString '\"'; text
+        '\'':'\\':_   -> do any2Chars_; hsString '\''; text
+        '\'':d:'\'':_ -> do any3Chars_; text
+        '\'':_        -> do anyChar_; manySatisfy_ (\c' -> isAlphaNum c' || c' == '_' || c' == '\''); text
+            
+        '{':'-':_     -> do any2Chars_; linePragma `mplus`
                                     columnPragma `mplus`
                                     hsComment; text
-        _:_       -> do anyChar_; text
+        _:_           -> do anyChar_; text
+
 
 hsString :: Char -> Parser ()
 hsString quote = do
