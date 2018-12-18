@@ -164,25 +164,27 @@ text = do
                     text
         '\"':_        -> do anyChar_; hsString '\"'; text
         -- See Note [Single Quotes]
-        '\'':'\\':_   -> do any2Chars_; hsString '\''; text
-        '\'':d:'\'':_ -> do any3Chars_; text
-        '\'':' ':_    -> do any2Chars_; 
-                            manySatisfy_ (\c' -> isAlphaNum c' || c' == '_' || c' == '\'')
-                            text
-        '\'':_        -> do anyChar_
-                            manySatisfy_ (\c' -> isAlphaNum c' || c' == '_' || c' == '\'')
-                            text
-        '{':'-':_     -> do any2Chars_; linePragma `mplus`
-                                    columnPragma `mplus`
-                                    hsComment; text
+        '\'':'\\':_ -> do any2Chars_; hsString '\''; text -- Case 1
+        '\'':d:'\'':_ -> do any3Chars_; text -- Case 2
+        '\'':d:_ | isSpace d -> do -- Case 3
+          any2Chars_
+          manySatisfy_ (\c' -> isSpace c')
+          manySatisfy_ (\c' -> isAlphaNum c' || c' == '_' || c' == '\'')
+          text
+        '\'':_ -> do -- Case 4
+          anyChar_
+          manySatisfy_ (\c' -> isAlphaNum c' || c' == '_' || c' == '\'')
+          text
+        '{':'-':_ -> do
+          any2Chars_
+          linePragma `mplus` columnPragma `mplus` hsComment
+          text
         _:_           -> do anyChar_; text
 
 -- Note [Single Quotes]
 --
--- For a long time, hsc2hs did not handle promoted data constructors prefixed
--- with a single quote correctly. Now it performs some tricks to figure out
--- if we are looking at character literal or a promoted data constructor. In
--- order, the cases considered are:
+-- hsc2hs performs some tricks to figure out if we are looking at character
+-- literal or a promoted data constructor. In order, the cases considered are:
 --
 -- 1. quote-backslash: An escape sequence character literal. Since these
 --    escape sequences have several different possible lengths, hsc2hs will
@@ -191,7 +193,8 @@ text = do
 -- 3. quote-space: Here, the order of the patterns becomes important. This
 --    case and the case below handle promoted data constructors. This one
 --    is to handle data constructor that end in a quote. They have special
---    syntax for promotion that requires adding a leading space. Consume
+--    syntax for promotion that requires adding a leading space. After an
+--    arbitrary number of initial space characters, consume
 --    all alphanumeric characters and quotes, considering them part of the
 --    identifier.
 -- 4. quote: If nothing else matched, we assume we are dealing with a normal
@@ -205,10 +208,10 @@ text = do
 --
 --     main :: IO ()
 --     main = do
--- 2>    putChar '\NUL'
 -- 1>    putChar 'x'
--- 4>    let x = Proxy :: Proxy 'Bar
+-- 2>    putChar '\NUL'
 -- 3>    let y = Proxy :: Proxy ' Foo'
+-- 4>    let x = Proxy :: Proxy 'Bar
 --       pure ()
 
 hsString :: Char -> Parser ()
