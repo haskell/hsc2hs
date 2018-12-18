@@ -38,14 +38,16 @@ instance Monad Parser where
                         Success pos'' (out1++out2) imp'' b
                     Failure pos'' msg -> Failure pos'' msg
             Failure pos' msg -> Failure pos' msg
-    fail msg = Parser $ \pos _ -> Failure pos msg
+
+failp :: String -> Parser a
+failp msg = Parser $ \pos _ -> Failure pos msg
 
 instance Alternative Parser where
     empty = mzero
     (<|>) = mplus
 
 instance MonadPlus Parser where
-    mzero                     = fail "mzero"
+    mzero                     = failp "mzero"
     Parser m `mplus` Parser n =
         Parser $ \pos s -> case m pos s of
             success@(Success _ _ _ _) -> success
