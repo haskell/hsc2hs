@@ -19,7 +19,7 @@ import Flags
 import HSCParser
 import UtilsCodegen
 
-removeEmptyToks (Text _ txt) = txt == ""
+removeEmptyToks (Text _ txt) = txt /= "\n"
 removeEmptyToks _            = True
 
 outputDirect :: Config -> FilePath -> FilePath -> FilePath -> String -> [Token] -> IO ()
@@ -71,6 +71,7 @@ outputDirect config outName outDir outBase name toks = do
         concatMap outHeaderCProg specials++
         "\nint main (void)\n{\n"++
         outHeaderHs flags (if needsH then Just outHName else Nothing) specials++
+        outHsLine (SourcePos name 0 1)++
         fst (foldl' (outTokenHs enableCol) (id, (True, True, 0)) toks') ""++
         "    return 0;\n}\n"
 
