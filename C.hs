@@ -123,7 +123,7 @@ outTextHs :: (Bool, Bool, Int)          -- ^ state @(lineSync, colSync, lastLine
           -> (SourcePos -> String)      -- ^ output LINE pragma
           -> (Int -> String)            -- ^ output COLUMN pragma
           -> (String, (Bool, Bool, Int))
-outTextHs (lineSync, colSync, lastLine) pos@(SourcePos _ _ col) txt
+outTextHs (lineSync, colSync, lastLine) (SourcePos name line col) txt
           outText outLine outColumn =
     -- Ensure COLUMN pragmas are always inserted right before an identifier.
     -- They are never inserted in the middle of whitespace, as that could ruin
@@ -154,7 +154,7 @@ outTextHs (lineSync, colSync, lastLine) pos@(SourcePos _ _ col) txt
     where
     (spaces, rest) = span isSpace txt
     updateLine | lineSync   = ""
-               | otherwise = outLine pos
+               | otherwise = outLine (SourcePos name (line + 1) col)
     updateCol | colSync   = ""
               | otherwise = outColumn (col + length spaces)
 
