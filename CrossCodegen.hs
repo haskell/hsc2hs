@@ -194,11 +194,11 @@ diagnose :: String -> (String -> TestMonad ()) -> [Token] -> TestMonad ()
 diagnose inputFilename output input = do
     checkValidity input
     output ("{-# LINE 1 \"" ++ inputFilename ++ "\" #-}\n")
-    loop (True, True) (zipFromList input)
+    loop (True, True, 0) (zipFromList input)
 
     where
     loop _ (End _) = return ()
-    loop state@(lineSync, colSync)
+    loop state@(lineSync, colSync, lastLine)
          (Zipper z@ZCursor {zCursor=Special _ key _}) =
         case key of
             _ | key `elem` ["if","ifdef","ifndef","elif","else"] -> do
@@ -210,7 +210,7 @@ diagnose inputFilename output input = do
             "endif" -> loop state (zNext z)
             _ -> do
                 sync <- outputSpecial output z
-                loop (lineSync && sync, colSync && sync) (zNext z)
+                loop (lineSync && sync, colSync && sync, lastLine) (zNext z)
     loop state (Zipper z@ZCursor {zCursor=Text pos txt}) = do
         state' <- outputText state output pos txt
         loop state' (zNext z)
@@ -239,8 +239,8 @@ outputSpecial output (z@ZCursor {zCursor=Special pos@(SourcePos file line _)  ke
     where outputConst value' formatter = computeConst z value' >>= (output . formatter)
 outputSpecial _ _ = error "outputSpecial's argument isn't a Special"
 
-outputText :: (Bool, Bool) -> (String -> TestMonad ()) -> SourcePos -> String
-           -> TestMonad (Bool, Bool)
+outputText :: (Bool, Bool, Int) -> (String -> TestMonad ()) -> SourcePos -> String
+           -> TestMonad (Bool, Bool, Int)
 outputText state output pos txt = do
     enableCol <- fmap cColumn testGetConfig
     let outCol col | enableCol = "{-# COLUMN " ++ show col ++ " #-}"
