@@ -6,6 +6,9 @@
  - Support for non-x86 platforms should be significantly more robust due to
    improvements in `hsc2hs`'s assembly parser
 
+ - Add support for haskell files that use a leading single quote for promoted
+   data constructors.
+
 ## 0.68.4
 
  - Add support to read command line arguments supplied via response files
