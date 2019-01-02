@@ -166,7 +166,11 @@ text = do
                     text
         '\"':_        -> do anyChar_; hsString '\"'; text
         -- See Note [Single Quotes]
-        '\'':'\\':_ -> do any2Chars_; hsString '\''; text -- Case 1
+        '\'':'\\':_ -> do -- Case 1
+          any3Chars_
+          manySatisfyC_ (/= '\'')
+          char_ '\''
+          text
         '\'':d:'\'':_ -> do any3Chars_; text -- Case 2
         '\'':d:_ | isSpace d -> do -- Case 3
           any2Chars_
