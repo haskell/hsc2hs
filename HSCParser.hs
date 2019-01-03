@@ -189,8 +189,9 @@ hsc2hs performs some tricks to figure out if we are looking at character
 literal or a promoted data constructor. In order, the cases considered are:
 
 1. quote-backslash: An escape sequence character literal. Since these
-   escape sequences have several different possible lengths, hsc2hs will
-   consume everything after this until another single quote is encountered.
+   escape sequences have several different possible lengths, hsc2hs relies
+   on hsString to consume everything after this until another single quote
+   is encountered. See Note [Handling escaped characters].
 2. quote-any-quote: A character literal. Consumes the triplet.
 3. quote-space: Here, the order of the patterns becomes important. This
    case and the case below handle promoted data constructors. This one
@@ -210,8 +211,8 @@ would be matched at some point:
 
     main :: IO ()
     main = do
-1>    putChar 'x'
-2>    putChar '\NUL'
+1>    putChar '\NUL'
+2>    putChar 'x'
 3>    let y = Proxy :: Proxy ' Foo'
 4>    let x = Proxy :: Proxy 'Bar
       pure ()
@@ -237,7 +238,7 @@ hsString quote = do
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 There are several accepted escape codes for string and character literals.
 The function hsString handles all escape sequences that start with space
-its first guard and all others in the otherwise guard. It only needs
+in its first guard and all others in the otherwise guard. It only needs
 to consume two characters to handle these non-space-prefixed escape
 sequences correctly. Consider these examples:
 
