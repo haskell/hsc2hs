@@ -226,6 +226,17 @@ outputSpecial output (z@ZCursor {zCursor=Special pos@(SourcePos file line _)  ke
                              (\i -> "(\\hsc_ptr -> peekByteOff hsc_ptr " ++ show i ++ ")") >> return False
        "poke" -> outputConst ("offsetof(" ++ value ++ ")")
                              (\i -> "(\\hsc_ptr -> pokeByteOff hsc_ptr " ++ show i ++ ")") >> return False
+       "read" -> case break (== ',') value of
+         (typ,',':field) -> do
+           byteOffset <- computeConst z ("offsetof(" ++ value ++ ")")
+           -- This is the FIELD_SIZEOF macro as defined in the linux kernel.
+           fieldSize <- computeConst z ("sizeof(((" ++ typ ++ "*)0)->" ++ field ++ ")")
+           when (not (isPowerOfTwo fieldSize)) (testFail pos ("#error " ++ value))
+           let (elemOffset,remainder) = divMod byteOffset fieldSize
+           when (remainder /= 0) (testFail pos ("#error " ++ value))
+           output ("(\\hsc_ptr -> readByteArray hsc_ptr " ++ show elemOffset ++ ")")
+           return False
+         _ -> testFail pos ("#error " ++ value)
        "ptr" -> outputConst ("offsetof(" ++ value ++ ")")
                             (\i -> "(\\hsc_ptr -> hsc_ptr `plusPtr` " ++ show i ++ ")") >> return False
        "type" -> computeType z >>= output >> return False
@@ -405,6 +416,12 @@ binarySearch z nonNegative l u = do
             l <= l' && l' <= u' && u' <= u &&  -- @l <= l' <= u' <= u@
             u'-l' < u-l)                       -- @|u' - l'| < |u - l|@
            (binarySearch z nonNegative l' u')
+
+isPowerOfTwo :: Integer -> Bool
+isPowerOfTwo 0 = False
+isPowerOfTwo 1 = True
+isPowerOfTwo n = case divMod n 2 of
+  (m,r) -> if r == 0 then isPowerOfTwo m else False
 
 -- Establishes bounds on the unknown integer. By searching increasingly
 -- large powers of 2, it'll bracket an integer x by lower & upper
