@@ -61,6 +61,8 @@ Executable hsc2hs
                    directory  >= 1.1.0 && < 1.4,
                    filepath   >= 1.2.0 && < 1.5,
                    process    >= 1.1.0 && < 1.7
+
+    ghc-options:   -Wall
     if flag(in-ghc-tree)
        cpp-options: -DIN_GHC_TREE
 
