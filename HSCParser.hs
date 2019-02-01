@@ -167,7 +167,7 @@ text = do
         '\"':_        -> do anyChar_; hsString '\"'; text
         -- See Note [Single Quotes]
         '\'':'\\':_ -> do anyChar_; hsString '\''; text -- Case 1
-        '\'':d:'\'':_ -> do any3Chars_; text -- Case 2
+        '\'':_:'\'':_ -> do any3Chars_; text -- Case 2
         '\'':d:_ | isSpace d -> do -- Case 3
           any2Chars_
           manySatisfy_ (\c' -> isSpace c')
