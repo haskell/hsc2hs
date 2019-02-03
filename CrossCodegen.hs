@@ -226,17 +226,9 @@ outputSpecial output (z@ZCursor {zCursor=Special pos@(SourcePos file line _)  ke
                              (\i -> "(\\hsc_ptr -> peekByteOff hsc_ptr " ++ show i ++ ")") >> return False
        "poke" -> outputConst ("offsetof(" ++ value ++ ")")
                              (\i -> "(\\hsc_ptr -> pokeByteOff hsc_ptr " ++ show i ++ ")") >> return False
-       "read" -> case break (== ',') value of
-         (typ,',':field) -> do
-           byteOffset <- computeConst z ("offsetof(" ++ value ++ ")")
-           -- This is the FIELD_SIZEOF macro as defined in the linux kernel.
-           fieldSize <- computeConst z ("sizeof(((" ++ typ ++ "*)0)->" ++ field ++ ")")
-           when (not (isPowerOfTwo fieldSize)) (testFail pos ("#error " ++ value))
-           let (elemOffset,remainder) = divMod byteOffset fieldSize
-           when (remainder /= 0) (testFail pos ("#error " ++ value))
-           output ("(\\hsc_ptr -> readByteArray hsc_ptr " ++ show elemOffset ++ ")")
-           return False
-         _ -> testFail pos ("#error " ++ value)
+       "read" -> outputByteArrayOperation "readByteArray"
+       "write" -> outputByteArrayOperation "writeByteArray"
+       "index" -> outputByteArrayOperation "indexByteArray"
        "ptr" -> outputConst ("offsetof(" ++ value ++ ")")
                             (\i -> "(\\hsc_ptr -> hsc_ptr `plusPtr` " ++ show i ++ ")") >> return False
        "type" -> computeType z >>= output >> return False
@@ -247,7 +239,23 @@ outputSpecial output (z@ZCursor {zCursor=Special pos@(SourcePos file line _)  ke
        "define" -> return True
        "undef" -> return True
        _ -> testFail pos ("directive " ++ key ++ " cannot be handled in cross-compilation mode")
-    where outputConst value' formatter = computeConst z value' >>= (output . formatter)
+    where
+      outputConst value' formatter = computeConst z value' >>= (output . formatter)
+      -- GHC's ByteArray# type only supports read/write/index in an aligned
+      -- fashion. The index is always given in elements, not bytes. So, we
+      -- must divide the field's offset in bytes by its size to get index in
+      -- terms of elements.
+      outputByteArrayOperation operation = case break (== ',') value of
+         (typ,',':field) -> do
+           byteOffset <- computeConst z ("offsetof(" ++ value ++ ")")
+           -- This is the FIELD_SIZEOF macro as defined in the linux kernel.
+           fieldSize <- computeConst z ("sizeof(((" ++ typ ++ "*)0)->" ++ field ++ ")")
+           when (not (isPowerOfTwo fieldSize)) (testFail pos ("#error " ++ value))
+           let (elemOffset,remainder) = divMod byteOffset fieldSize
+           when (remainder /= 0) (testFail pos ("#error " ++ value))
+           output ("(\\hsc_ptr -> " ++ operation ++ " hsc_ptr " ++ show elemOffset ++ ")")
+           return False
+         _ -> testFail pos ("#error " ++ value)
 outputSpecial _ _ = error "outputSpecial's argument isn't a Special"
 
 outputText :: (Bool, Bool) -> (String -> TestMonad ()) -> SourcePos -> String
