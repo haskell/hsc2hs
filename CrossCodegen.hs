@@ -229,6 +229,8 @@ outputSpecial output (z@ZCursor {zCursor=Special pos@(SourcePos file line _)  ke
        "read" -> outputByteArrayOperation "readByteArray"
        "write" -> outputByteArrayOperation "writeByteArray"
        "index" -> outputByteArrayOperation "indexByteArray"
+       "readHash" -> outputByteArrayOperation "readByteArray#"
+       "writeHash" -> outputByteArrayOperation "writeByteArray#"
        "ptr" -> outputConst ("offsetof(" ++ value ++ ")")
                             (\i -> "(\\hsc_ptr -> hsc_ptr `plusPtr` " ++ show i ++ ")") >> return False
        "type" -> computeType z >>= output >> return False
@@ -253,7 +255,7 @@ outputSpecial output (z@ZCursor {zCursor=Special pos@(SourcePos file line _)  ke
            when (not (isPowerOfTwo fieldSize)) (testFail pos ("#error " ++ value))
            let (elemOffset,remainder) = divMod byteOffset fieldSize
            when (remainder /= 0) (testFail pos ("#error " ++ value))
-           output ("(\\hsc_ptr -> " ++ operation ++ " hsc_ptr " ++ show elemOffset ++ ")")
+           output ("(\\hsc_arr -> " ++ operation ++ " hsc_arr " ++ show elemOffset ++ ")")
            return False
          _ -> testFail pos ("#error " ++ value)
 outputSpecial _ _ = error "outputSpecial's argument isn't a Special"
