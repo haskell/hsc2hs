@@ -58,7 +58,8 @@ outputDirect config outName outDir outBase name toks = do
         forM_ specials (\ (SourcePos file line _,key,_) ->
             when (not $ key `elem` ["const","offset","size","alignment","peek","poke","ptr",
                                     "type","enum","error","warning","include","define","undef",
-                                    "if","ifdef","ifndef", "elif","else","endif"]) $
+                                    "if","ifdef","ifndef", "elif","else","endif",
+                                    "read","write","index","readHash","writeHash"]) $
              die (file ++ ":" ++ show line ++ " directive \"" ++ key ++ "\" is not safe for cross-compilation"))
 
     writeBinaryFile cProgName $
