@@ -226,12 +226,15 @@ outputSpecial output (z@ZCursor {zCursor=Special pos@(SourcePos file line _)  ke
                              (\i -> "(\\hsc_ptr -> peekByteOff hsc_ptr " ++ show i ++ ")") >> return False
        "poke" -> outputConst ("offsetof(" ++ value ++ ")")
                              (\i -> "(\\hsc_ptr -> pokeByteOff hsc_ptr " ++ show i ++ ")") >> return False
-       "read" -> outputByteArrayOperation "readByteArray"
-       "write" -> outputByteArrayOperation "writeByteArray"
-       "index" -> outputByteArrayOperation "indexByteArray"
-       "readHash" -> outputByteArrayOperation "readByteArray#"
-       "writeHash" -> outputByteArrayOperation "writeByteArray#"
-       "indexHash" -> outputByteArrayOperation "indexByteArray#"
+       "readByteArray" -> outputByteArrayOperation "readByteArray"
+       "writeByteArray" -> outputByteArrayOperation "writeByteArray"
+       "indexByteArray" -> outputByteArrayOperation "indexByteArray"
+       "readByteArrayHash" -> outputByteArrayOperation "readByteArray#"
+       "writeByteArrayHash" -> outputByteArrayOperation "writeByteArray#"
+       "indexByteArrayHash" -> outputByteArrayOperation "indexByteArray#"
+       "readOffAddrHash" -> outputByteArrayOperation "readOffAddr#"
+       "writeOffAddrHash" -> outputByteArrayOperation "writeOffAddr#"
+       "indexOffAddrHash" -> outputByteArrayOperation "indexOffAddr#"
        "ptr" -> outputConst ("offsetof(" ++ value ++ ")")
                             (\i -> "(\\hsc_ptr -> hsc_ptr `plusPtr` " ++ show i ++ ")") >> return False
        "type" -> computeType z >>= output >> return False
