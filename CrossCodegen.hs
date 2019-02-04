@@ -264,7 +264,7 @@ outputSpecial output (z@ZCursor {zCursor=Special pos@(SourcePos file line _)  ke
            when (r2 /= 0) (testFail pos ("#error " ++ value))
            if boxed
              then output ("(\\hsc_arr hsc_ix -> " ++ operation ++ " hsc_arr (" ++ show elemOffset ++ " + (hsc_ix * " ++ show typFieldRatio ++ ")))")
-             else output ("(\\hsc_arr hsc_ix -> " ++ operation ++ " hsc_arr (" ++ show elemOffset ++ " +# (hsc_ix *# " ++ show typFieldRatio ++ ")))")
+             else output ("(\\hsc_arr hsc_ix -> " ++ operation ++ " hsc_arr (" ++ show elemOffset ++ "# +# (hsc_ix *# " ++ show typFieldRatio ++ "#)))")
            return False
          _ -> testFail pos ("#error " ++ value)
 outputSpecial _ _ = error "outputSpecial's argument isn't a Special"
