@@ -226,15 +226,15 @@ outputSpecial output (z@ZCursor {zCursor=Special pos@(SourcePos file line _)  ke
                              (\i -> "(\\hsc_ptr -> peekByteOff hsc_ptr " ++ show i ++ ")") >> return False
        "poke" -> outputConst ("offsetof(" ++ value ++ ")")
                              (\i -> "(\\hsc_ptr -> pokeByteOff hsc_ptr " ++ show i ++ ")") >> return False
-       "readByteArray" -> outputByteArrayOperation "readByteArray"
-       "writeByteArray" -> outputByteArrayOperation "writeByteArray"
-       "indexByteArray" -> outputByteArrayOperation "indexByteArray"
-       "readByteArrayHash" -> outputByteArrayOperation "readByteArray#"
-       "writeByteArrayHash" -> outputByteArrayOperation "writeByteArray#"
-       "indexByteArrayHash" -> outputByteArrayOperation "indexByteArray#"
-       "readOffAddrHash" -> outputByteArrayOperation "readOffAddr#"
-       "writeOffAddrHash" -> outputByteArrayOperation "writeOffAddr#"
-       "indexOffAddrHash" -> outputByteArrayOperation "indexOffAddr#"
+       "readByteArray" -> outputByteArrayOperation True "readByteArray"
+       "writeByteArray" -> outputByteArrayOperation True "writeByteArray"
+       "indexByteArray" -> outputByteArrayOperation True "indexByteArray"
+       "readByteArrayHash" -> outputByteArrayOperation False "readByteArray#"
+       "writeByteArrayHash" -> outputByteArrayOperation False "writeByteArray#"
+       "indexByteArrayHash" -> outputByteArrayOperation False "indexByteArray#"
+       "readOffAddrHash" -> outputByteArrayOperation False "readOffAddr#"
+       "writeOffAddrHash" -> outputByteArrayOperation False "writeOffAddr#"
+       "indexOffAddrHash" -> outputByteArrayOperation False "indexOffAddr#"
        "ptr" -> outputConst ("offsetof(" ++ value ++ ")")
                             (\i -> "(\\hsc_ptr -> hsc_ptr `plusPtr` " ++ show i ++ ")") >> return False
        "type" -> computeType z >>= output >> return False
@@ -251,7 +251,7 @@ outputSpecial output (z@ZCursor {zCursor=Special pos@(SourcePos file line _)  ke
       -- fashion. The index is always given in elements, not bytes. So, we
       -- must divide the field's offset in bytes by its size to get index in
       -- terms of elements.
-      outputByteArrayOperation operation = case break (== ',') value of
+      outputByteArrayOperation boxed operation = case break (== ',') value of
          (typ,',':field) -> do
            byteOffset <- computeConst z ("offsetof(" ++ value ++ ")")
            typSize <- computeConst z ("sizeof(" ++ typ ++ ")")
@@ -262,7 +262,9 @@ outputSpecial output (z@ZCursor {zCursor=Special pos@(SourcePos file line _)  ke
            when (r1 /= 0) (testFail pos ("#error " ++ value))
            let (typFieldRatio,r2) = divMod typSize fieldSize
            when (r2 /= 0) (testFail pos ("#error " ++ value))
-           output ("(\\hsc_arr hsc_ix -> " ++ operation ++ " hsc_arr (" ++ show elemOffset ++ " + (hsc_ix * " ++ show typFieldRatio ++ ")))")
+           if boxed
+             then output ("(\\hsc_arr hsc_ix -> " ++ operation ++ " hsc_arr (" ++ show elemOffset ++ " + (hsc_ix * " ++ show typFieldRatio ++ ")))")
+             else output ("(\\hsc_arr hsc_ix -> " ++ operation ++ " hsc_arr (" ++ show elemOffset ++ " +# (hsc_ix *# " ++ show typFieldRatio ++ ")))")
            return False
          _ -> testFail pos ("#error " ++ value)
 outputSpecial _ _ = error "outputSpecial's argument isn't a Special"
