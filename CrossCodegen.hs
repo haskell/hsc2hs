@@ -231,6 +231,7 @@ outputSpecial output (z@ZCursor {zCursor=Special pos@(SourcePos file line _)  ke
        "index" -> outputByteArrayOperation "indexByteArray"
        "readHash" -> outputByteArrayOperation "readByteArray#"
        "writeHash" -> outputByteArrayOperation "writeByteArray#"
+       "indexHash" -> outputByteArrayOperation "indexByteArray#"
        "ptr" -> outputConst ("offsetof(" ++ value ++ ")")
                             (\i -> "(\\hsc_ptr -> hsc_ptr `plusPtr` " ++ show i ++ ")") >> return False
        "type" -> computeType z >>= output >> return False
@@ -250,12 +251,15 @@ outputSpecial output (z@ZCursor {zCursor=Special pos@(SourcePos file line _)  ke
       outputByteArrayOperation operation = case break (== ',') value of
          (typ,',':field) -> do
            byteOffset <- computeConst z ("offsetof(" ++ value ++ ")")
+           typSize <- computeConst z ("sizeof(" ++ typ ++ ")")
            -- This is the FIELD_SIZEOF macro as defined in the linux kernel.
            fieldSize <- computeConst z ("sizeof(((" ++ typ ++ "*)0)->" ++ field ++ ")")
            when (not (isPowerOfTwo fieldSize)) (testFail pos ("#error " ++ value))
-           let (elemOffset,remainder) = divMod byteOffset fieldSize
-           when (remainder /= 0) (testFail pos ("#error " ++ value))
-           output ("(\\hsc_arr -> " ++ operation ++ " hsc_arr " ++ show elemOffset ++ ")")
+           let (elemOffset,r1) = divMod byteOffset fieldSize
+           when (r1 /= 0) (testFail pos ("#error " ++ value))
+           let (typFieldRatio,r2) = divMod typSize fieldSize
+           when (r2 /= 0) (testFail pos ("#error " ++ value))
+           output ("(\\hsc_arr hsc_ix -> " ++ operation ++ " hsc_arr (" ++ show elemOffset ++ " + (hsc_ix * " ++ show typFieldRatio ++ ")))")
            return False
          _ -> testFail pos ("#error " ++ value)
 outputSpecial _ _ = error "outputSpecial's argument isn't a Special"

@@ -135,36 +135,43 @@ void *hsc_stdout(void);
     }
 
 #define hsc_read(t, f) \
-  if ((offsetof(t,f)) % (FIELD_SIZEOF(t,f)) == 0) { \
-    hsc_printf ("(\\hsc_arr -> readByteArray hsc_arr %ld)", ((offsetof(t,f)) / (FIELD_SIZEOF(t,f)))); \
+  if ((offsetof(t,f)) % (FIELD_SIZEOF(t,f)) == 0 && (sizeof(t) % (FIELD_SIZEOF(t,f))) == 0) { \
+    hsc_printf ("(\\hsc_arr hsc_ix -> readByteArray hsc_arr (%ld + (hsc_ix * %ld))", ((offsetof(t,f)) / (FIELD_SIZEOF(t,f))), (sizeof(t) / (FIELD_SIZEOF(t,f)))); \
   } else { \
     hsc_printf ("BAD_BYTEARRAY_ALIGNMENT"); \
   }
 
 #define hsc_write(t, f) \
-  if ((offsetof(t,f)) % (FIELD_SIZEOF(t,f)) == 0) { \
-    hsc_printf ("(\\hsc_arr -> writeByteArray hsc_arr %ld)", ((offsetof(t,f)) / (FIELD_SIZEOF(t,f)))); \
+  if ((offsetof(t,f)) % (FIELD_SIZEOF(t,f)) == 0 && (sizeof(t) % (FIELD_SIZEOF(t,f))) == 0) { \
+    hsc_printf ("(\\hsc_arr hsc_ix -> writeByteArray hsc_arr (%ld + (hsc_ix * %ld))", ((offsetof(t,f)) / (FIELD_SIZEOF(t,f))), (sizeof(t) / (FIELD_SIZEOF(t,f)))); \
   } else { \
     hsc_printf ("BAD_BYTEARRAY_ALIGNMENT"); \
   }
 
 #define hsc_index(t, f) \
-  if ((offsetof(t,f)) % (FIELD_SIZEOF(t,f)) == 0) { \
-    hsc_printf ("(\\hsc_arr -> indexByteArray hsc_arr %ld)", ((offsetof(t,f)) / (FIELD_SIZEOF(t,f)))); \
+  if ((offsetof(t,f)) % (FIELD_SIZEOF(t,f)) == 0 && (sizeof(t) % (FIELD_SIZEOF(t,f))) == 0) { \
+    hsc_printf ("(\\hsc_arr hsc_ix -> indexByteArray hsc_arr (%ld + (hsc_ix * %ld))", ((offsetof(t,f)) / (FIELD_SIZEOF(t,f))), (sizeof(t) / (FIELD_SIZEOF(t,f)))); \
   } else { \
     hsc_printf ("BAD_BYTEARRAY_ALIGNMENT"); \
   }
 
 #define hsc_readHash(t, f) \
-  if ((offsetof(t,f)) % (FIELD_SIZEOF(t,f)) == 0) { \
-    hsc_printf ("(\\hsc_arr -> readByteArray# hsc_arr %ld)", ((offsetof(t,f)) / (FIELD_SIZEOF(t,f)))); \
+  if ((offsetof(t,f)) % (FIELD_SIZEOF(t,f)) == 0 && (sizeof(t) % (FIELD_SIZEOF(t,f))) == 0) { \
+    hsc_printf ("(\\hsc_arr hsc_ix -> readByteArray# hsc_arr (%ld + (hsc_ix * %ld))", ((offsetof(t,f)) / (FIELD_SIZEOF(t,f))), (sizeof(t) / (FIELD_SIZEOF(t,f)))); \
   } else { \
     hsc_printf ("BAD_BYTEARRAY_ALIGNMENT"); \
   }
 
 #define hsc_writeHash(t, f) \
-  if ((offsetof(t,f)) % (FIELD_SIZEOF(t,f)) == 0) { \
-    hsc_printf ("(\\hsc_arr -> writeByteArray# hsc_arr %ld)", ((offsetof(t,f)) / (FIELD_SIZEOF(t,f)))); \
+  if ((offsetof(t,f)) % (FIELD_SIZEOF(t,f)) == 0 && (sizeof(t) % (FIELD_SIZEOF(t,f))) == 0) { \
+    hsc_printf ("(\\hsc_arr hsc_ix -> writeByteArray# hsc_arr (%ld + (hsc_ix * %ld))", ((offsetof(t,f)) / (FIELD_SIZEOF(t,f))), (sizeof(t) / (FIELD_SIZEOF(t,f)))); \
+  } else { \
+    hsc_printf ("BAD_BYTEARRAY_ALIGNMENT"); \
+  }
+
+#define hsc_indexHash(t, f) \
+  if ((offsetof(t,f)) % (FIELD_SIZEOF(t,f)) == 0 && (sizeof(t) % (FIELD_SIZEOF(t,f))) == 0) { \
+    hsc_printf ("(\\hsc_arr hsc_ix -> indexByteArray# hsc_arr (%ld + (hsc_ix * %ld))", ((offsetof(t,f)) / (FIELD_SIZEOF(t,f))), (sizeof(t) / (FIELD_SIZEOF(t,f)))); \
   } else { \
     hsc_printf ("BAD_BYTEARRAY_ALIGNMENT"); \
   }

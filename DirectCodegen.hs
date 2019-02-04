@@ -59,7 +59,7 @@ outputDirect config outName outDir outBase name toks = do
             when (not $ key `elem` ["const","offset","size","alignment","peek","poke","ptr",
                                     "type","enum","error","warning","include","define","undef",
                                     "if","ifdef","ifndef", "elif","else","endif",
-                                    "read","write","index","readHash","writeHash"]) $
+                                    "read","write","index","readHash","writeHash","indexHash"]) $
              die (file ++ ":" ++ show line ++ " directive \"" ++ key ++ "\" is not safe for cross-compilation"))
 
     writeBinaryFile cProgName $
