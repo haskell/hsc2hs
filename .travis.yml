@@ -148,5 +148,5 @@ script:
   # Build without installed constraints for packages in global-db
   - if $UNCONSTRAINED; then rm -f cabal.project.local; echo cabal new-build -w ${HC} --disable-tests --disable-benchmarks all; else echo "Not building without installed constraints"; fi
 
-# REGENDATA ["-o",".travis.yml","--ghc-head","--env=7.0.4:NOINSTALLEDCONSTRAINTS=true TEST=--disable-tests BENCH=--disable-benchmarks","--env=7.2.2:TEST=--disable-tests BENCH=--disable-benchmarks","cabal.project"]
+# REGENDATA ["--output=.travis.yml","--config=cabal.haskell-ci","cabal.project"]
 # EOF
