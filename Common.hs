@@ -1,11 +1,15 @@
+{-# LANGUAGE CPP #-}
 module Common where
 
-import Control.Exception        ( bracket_ )
+import Control.Concurrent       ( threadDelay )
+import Control.Exception        ( bracket_, try, throw )
 import qualified Control.Exception as Exception
 import Control.Monad            ( when )
 import System.IO
+import System.IO.Error          ( isPermissionError )
 
-import System.Process           ( rawSystem, runProcess, waitForProcess )
+import System.Process           ( rawSystem, createProcess_, waitForProcess
+                                , proc, CreateProcess(..), StdStream(..) )
 
 import System.Exit              ( ExitCode(..), exitWith )
 import System.Directory         ( removeFile )
@@ -38,7 +42,9 @@ rawSystemWithStdOutL action flg prog args outFile = do
   let cmdLine = prog++" "++unwords args++" >"++outFile
   when flg (hPutStrLn stderr ("Executing: " ++ cmdLine))
   hOut <- openFile outFile WriteMode
-  process <- runProcess prog args Nothing Nothing Nothing (Just hOut) Nothing
+  (_ ,_ ,_ , process) <-
+    createProcess_ "rawSystemWithStdOutL"
+      (proc prog args){ use_process_jobs = True, std_out = UseHandle  hOut }
   exitStatus <- waitForProcess process
   hClose hOut
   case exitStatus of
@@ -56,9 +62,32 @@ finallyRemove fp act =
            (noisyRemove fp)
            act
  where
+  max_retries = 5
   noisyRemove fpath =
-    catchIO (removeFile fpath)
+    catchIO (removeFileInternal max_retries fpath)
             (\ e -> hPutStrLn stderr ("Failed to remove file " ++ fpath ++ "; error= " ++ show e))
+  removeFileInternal retries path = do
+#if defined(mingw32_HOST_OS)
+  -- On Windows we have to retry the delete a couple of times.
+  -- The reason for this is that a FileDelete command just marks a
+  -- file for deletion. The file is really only removed when the last
+  -- handle to the file is closed. Unfortunately there are a lot of
+  -- system services that can have a file temporarily opened using a shared
+  -- read-only lock, such as the built in AV and search indexer.
+  --
+  -- We can't really guarantee that these are all off, so what we can do is
+  -- whenever after an rm the file still exists to try again and wait a bit.
+    res <- try $ removeFile path
+    case res of
+      Right a -> return a
+      Left ex | isPermissionError ex && retries > 1 -> do
+                  let retries' = retries - 1
+                  threadDelay ((max_retries - retries') * 200)
+                  removeFileInternal retries' path
+              | otherwise -> throw ex
+#else
+    removeFile path
+#endif
 
 catchIO :: IO a -> (Exception.IOException -> IO a) -> IO a
 catchIO = Exception.catch
