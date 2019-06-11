@@ -212,7 +212,7 @@ Meanings of specific keywords:
     The macros ``#readByteArrayHash``, ``#writeByteArayHash``,
     ``#indexByteArrayHash``, ``#readOffAddrHash``, ``#writeOffAddrHash``,
     and ``#indexOffAddrHash`` are intended to be used to implement instances
-    of ``Prim`` (see `instances`_).
+    of ``Prim`` (see `implementing-instances`_).
 
 ``#enum ⟨type⟩, ⟨constructor⟩, ⟨value⟩, ⟨value⟩, ...``
     A shortcut for multiple definitions which use ``#const``. Each
@@ -267,7 +267,7 @@ The following are unsupported:
 -  ``#{def}``
 -  Custom constructs
 
-.. _instances
+.. _implementing-instances:
 
 Implementing Instances
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -281,9 +281,9 @@ below. `IEEE Std 1003.1-2017`_ describes ``struct pollfd`` as:
 +-------+---------+----------------------------------------+
 | int   | fd      | The following descriptor being polled. |
 +-------+---------+----------------------------------------+
-| short | events  | The input event flags (see below).     |
+| short | events  | The input event flags.                 |
 +-------+---------+----------------------------------------+
-| short | revents | The output event flags (see below).    |
+| short | revents | The output event flags.                |
 +-------+---------+----------------------------------------+
 
 The `Linux poll man page`_ provides a concrete implementation,
@@ -292,6 +292,7 @@ describing ``struct pollfd`` as:
 .. _`Linux poll man page`: http://man7.org/linux/man-pages/man2/poll.2.html
 
 ::
+
   struct pollfd {
       int   fd;         /* file descriptor */
       short events;     /* requested events */
@@ -301,6 +302,7 @@ describing ``struct pollfd`` as:
 This type is most directly expressed in Haskell as:
 
 ::
+
   data PollFd = PollFd
     { descriptor :: !Fd
     , request    :: !CShort
