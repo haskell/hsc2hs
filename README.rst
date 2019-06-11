@@ -195,6 +195,25 @@ Meanings of specific keywords:
     Computes the alignment, in bytes, of ``struct_type``. It will have type
     ``Int``.
 
+``#readByteArray ⟨struct_type⟩, ⟨field⟩``
+    Outputs a function that indexes into an array of a C struct. It will
+    have the type ``Prim a => MutableByteArray (PrimState m) -> Int -> m a``.
+    The context must ensure that ``a`` is a type that can be marshalled
+    to the C field type.  This only supports access to aligned fields and
+    will fail at compile time if the field is not aligned. The source
+    expression ``#{readByteArray struct foo, bar} arr 42`` becomes an
+    expression that has the same behavior as the C expression
+    ``((struct foo*) arr)[42].bar``. 
+
+``#readByteArrayHash ⟨struct_type⟩, ⟨field⟩``
+    Variant of ``#readByteArray`` with unlifted argument and result types.
+    It will have the type
+    ``Prim a => MutableByteArray# s -> Int# -> State# s -> (# State# s, a #)``.
+    The macros ``#readByteArrayHash``, ``#writeByteArayHash``,
+    ``#indexByteArrayHash``, ``#readOffAddrHash``, ``#writeOffAddrHash``,
+    and ``#indexOffAddrHash`` are intended to be used to implement instances
+    of ``Prim`` (see `instances`_).
+
 ``#enum ⟨type⟩, ⟨constructor⟩, ⟨value⟩, ⟨value⟩, ...``
     A shortcut for multiple definitions which use ``#const``. Each
     ``value`` is a name of a C integer constant, e.g. enumeration value.
@@ -247,3 +266,119 @@ The following are unsupported:
 -  ``#{let}``
 -  ``#{def}``
 -  Custom constructs
+
+.. _instances
+
+Implementing Instances
+~~~~~~~~~~~~~~~~~~~~~~
+
+As an example, the ``Storable`` and ``Prim`` instances for a haskell
+data type corresponding to the POSIX ``struct pollfd`` are implemented
+below. `IEEE Std 1003.1-2017`_ describes ``struct pollfd`` as:
+
+.. _`IEEE Std 1003.1-2017`: http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/poll.h.html
+
++-------+---------+----------------------------------------+
+| int   | fd      | The following descriptor being polled. |
++-------+---------+----------------------------------------+
+| short | events  | The input event flags (see below).     |
++-------+---------+----------------------------------------+
+| short | revents | The output event flags (see below).    |
++-------+---------+----------------------------------------+
+
+The `Linux poll man page`_ provides a concrete implementation,
+describing ``struct pollfd`` as:
+
+.. _`Linux poll man page`: http://man7.org/linux/man-pages/man2/poll.2.html
+
+::
+  struct pollfd {
+      int   fd;         /* file descriptor */
+      short events;     /* requested events */
+      short revents;    /* returned events */
+  };
+
+This type is most directly expressed in Haskell as:
+
+::
+  data PollFd = PollFd
+    { descriptor :: !Fd
+    , request    :: !CShort
+    , response   :: !CShort
+    }
+
+We now use ``hsc2hs`` to help write a portable ``Storable`` instance.
+The GHC ``NamedFieldPuns`` extension is used for succinctness although
+it is not necessary::
+
+  instance Storable PollFd where
+    sizeOf _ = #size struct pollfd
+    alignment _ = #alignment struct pollfd
+    peek ptr = do
+      descriptor <- #{peek struct pollfd, fd} ptr
+      request <- #{peek struct pollfd, events} ptr
+      response <- #{peek struct pollfd, revents} ptr
+      return (PollFd{descriptor,request,response})
+    poke ptr PollFd{descriptor,request,response} = do
+      #{poke struct pollfd, fd} ptr descriptor
+      #{poke struct pollfd, events} ptr request
+      #{poke struct pollfd, revents} ptr response
+
+More verbosely, ``hsc2hs`` can also be used to help write portable ``Prim``
+instances that are intended to marshall C data types. (Unlike ``Storable``,
+whose sole purpose is to help marshall C data types, ``Prim`` is not used
+exclusively for this purpose, but it is occassionally useful in this domain.)
+This example uses the GHC extensions ``MagicHash`` and ``UnboxedTuples``,
+which are required. It also uses the GHC extension ``NamedFieldPuns``,
+which is optional as it was in the ``Storable`` example. Notice that all
+the source Haskell hash characters escaped by doubling them::
+
+  import GHC.Exts
+  import Data.Primitive.Types (Prim(..),defaultSetByteArray##,defaultSetOffAddr##)
+  
+  unInt :: Int -> Int##
+  unInt (I## i) = i
+
+  instance Prim PollFd where
+    sizeOf## _ = unInt #{size struct pollfd}
+    alignment## _ = unInt #{alignment struct pollfd}
+    indexByteArray## arr i = PollFd
+      { descriptor = #{indexByteArrayHash struct pollfd, fd} arr i
+      , request = #{indexByteArrayHash struct pollfd, events} arr i
+      , response = #{indexByteArrayHash struct pollfd, revents} arr i
+      }
+    writeByteArray## arr i PollFd{descriptor,request,response} s0 =
+      case #{writeByteArrayHash struct pollfd, fd} arr i descriptor s0 of
+        s1 -> case #{writeByteArrayHash struct pollfd, events} arr i request s1 of
+          s2 -> #{writeByteArrayHash struct pollfd, revents} arr i response s2
+    readByteArray## arr i s0 = case #{readByteArrayHash struct pollfd, fd} arr i s0 of
+      (## s1, descriptor ##) -> case #{readByteArrayHash struct pollfd, events} arr i s1 of
+        (## s2, request ##) -> case #{readByteArrayHash struct pollfd, revents} arr i s2 of
+          (## s3, response ##) -> (## s3, PollFd{descriptor,request,response} ##)
+    setByteArray## = defaultSetByteArray##
+    indexOffAddr## arr i = PollFd
+      { descriptor = #{indexOffAddrHash struct pollfd, fd} arr i
+      , request = #{indexOffAddrHash struct pollfd, events} arr i
+      , response = #{indexOffAddrHash struct pollfd, revents} arr i
+      }
+    writeOffAddr## arr i PollFd{descriptor,request,response} s0 =
+      case #{writeOffAddrHash struct pollfd, fd} arr i descriptor s0 of
+        s1 -> case #{writeOffAddrHash struct pollfd, events} arr i request s1 of
+          s2 -> #{writeOffAddrHash struct pollfd, revents} arr i response s2
+    readOffAddr## arr i s0 = case #{readOffAddrHash struct pollfd, fd} arr i s0 of
+      (## s1, descriptor ##) -> case #{readOffAddrHash struct pollfd, events} arr i s1 of
+        (## s2, request ##) -> case #{readOffAddrHash struct pollfd, revents} arr i s2 of
+          (## s3, response ##) -> (## s3, PollFd{descriptor,request,response} ##)
+    setOffAddr## = defaultSetOffAddr##
+
+Keep in mind that, unlike the code-generation for the ``Storable`` instance,
+this code-generation will cause a compile-time failure if the operating system
+has an esoteric implementation of ``struct pollfd`` with unaligned fields.
+Note that the ``Prim`` instances is necessarily more verbose that the
+``Storable`` instance. Two factors contribute to this:
+
+* ``Prim`` deals with both managed and unmanaged memory
+* The typeclass methods of ``Prim`` use unlifted types
+
+Despite the verbosity, this is a portable solution for Haskell code that needs
+to pass runtime-managed, unpinned memory to a C library using the unsafe FFI.
