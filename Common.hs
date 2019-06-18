@@ -43,8 +43,17 @@ rawSystemWithStdOutL action flg prog args outFile = do
   when flg (hPutStrLn stderr ("Executing: " ++ cmdLine))
   hOut <- openFile outFile WriteMode
   (_ ,_ ,_ , process) <-
+    -- We use createProcess_ here instead of runProcess or createProcess since
+    -- we need to specify a custom CreateProcess structure to turn on
+    -- use_process_jobs when available and also because we don't want the
+    -- handles closed automatically.  We close them manually after the process
+    -- terminates.
     createProcess_ "rawSystemWithStdOutL"
+#if MIN_VERSION_process (1,5,0)
       (proc prog args){ use_process_jobs = True, std_out = UseHandle  hOut }
+#else
+      (proc prog args){ std_out = UseHandle hOut }
+#endif
   exitStatus <- waitForProcess process
   hClose hOut
   case exitStatus of
@@ -62,7 +71,10 @@ finallyRemove fp act =
            (noisyRemove fp)
            act
  where
+  max_retries :: Int
   max_retries = 5
+
+  noisyRemove :: FilePath -> IO ()
   noisyRemove fpath =
     catchIO (removeFileInternal max_retries fpath)
             (\ e -> hPutStrLn stderr ("Failed to remove file " ++ fpath ++ "; error= " ++ show e))
