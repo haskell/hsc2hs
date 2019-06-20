@@ -1,16 +1,17 @@
 {-# LANGUAGE CPP #-}
 module Common where
 
+#if MIN_VERSION_process (1,5,0)
 import Control.Concurrent       ( threadDelay )
-import Control.Exception        ( bracket_, try, throw )
+#endif
 import qualified Control.Exception as Exception
 import Control.Monad            ( when )
 import System.IO
+#if MIN_VERSION_process (1,5,0)
 import System.IO.Error          ( isPermissionError )
-
-import System.Process           ( rawSystem, createProcess_, waitForProcess
+#endif
+import System.Process           ( rawSystem, createProcess, waitForProcess
                                 , proc, CreateProcess(..), StdStream(..) )
-
 import System.Exit              ( ExitCode(..), exitWith )
 import System.Directory         ( removeFile )
 
@@ -43,12 +44,10 @@ rawSystemWithStdOutL action flg prog args outFile = do
   when flg (hPutStrLn stderr ("Executing: " ++ cmdLine))
   hOut <- openFile outFile WriteMode
   (_ ,_ ,_ , process) <-
-    -- We use createProcess_ here instead of runProcess or createProcess since
-    -- we need to specify a custom CreateProcess structure to turn on
-    -- use_process_jobs when available and also because we don't want the
-    -- handles closed automatically.  We close them manually after the process
-    -- terminates.
-    createProcess_ "rawSystemWithStdOutL"
+    -- We use createProcess here instead of runProcess since we need to specify
+    -- a custom CreateProcess structure to turn on use_process_jobs when
+    -- available.
+    createProcess
 #if MIN_VERSION_process (1,5,0)
       (proc prog args){ use_process_jobs = True, std_out = UseHandle  hOut }
 #else
@@ -67,7 +66,7 @@ rawSystemWithStdOutL action flg prog args outFile = do
 -- just been exec'ed by a sub-process (Win32 only.)
 finallyRemove :: FilePath -> IO a -> IO a
 finallyRemove fp act =
-  bracket_ (return fp)
+  Exception.bracket_ (return fp)
            (noisyRemove fp)
            act
  where
@@ -78,7 +77,7 @@ finallyRemove fp act =
   noisyRemove fpath =
     catchIO (removeFileInternal max_retries fpath)
             (\ e -> hPutStrLn stderr ("Failed to remove file " ++ fpath ++ "; error= " ++ show e))
-  removeFileInternal retries path = do
+  removeFileInternal _retries path = do
 #if defined(mingw32_HOST_OS)
   -- On Windows we have to retry the delete a couple of times.
   -- The reason for this is that a FileDelete command just marks a
@@ -89,14 +88,14 @@ finallyRemove fp act =
   --
   -- We can't really guarantee that these are all off, so what we can do is
   -- whenever after an rm the file still exists to try again and wait a bit.
-    res <- try $ removeFile path
+    res <- Exception.try $ removeFile path
     case res of
       Right a -> return a
-      Left ex | isPermissionError ex && retries > 1 -> do
-                  let retries' = retries - 1
+      Left ex | isPermissionError ex && _retries > 1 -> do
+                  let retries' = _retries - 1
                   threadDelay ((max_retries - retries') * 200)
                   removeFileInternal retries' path
-              | otherwise -> throw ex
+              | otherwise -> Exception.throw ex
 #else
     removeFile path
 #endif
