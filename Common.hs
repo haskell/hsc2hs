@@ -1,13 +1,11 @@
 {-# LANGUAGE CPP #-}
 module Common where
 
-#if MIN_VERSION_process (1,5,0)
-import Control.Concurrent       ( threadDelay )
-#endif
 import qualified Control.Exception as Exception
 import Control.Monad            ( when )
 import System.IO
-#if MIN_VERSION_process (1,5,0)
+#if defined(mingw32_HOST_OS)
+import Control.Concurrent       ( threadDelay )
 import System.IO.Error          ( isPermissionError )
 #endif
 import System.Process           ( rawSystem, createProcess, waitForProcess
