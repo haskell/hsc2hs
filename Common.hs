@@ -1,12 +1,15 @@
+{-# LANGUAGE CPP #-}
 module Common where
 
-import Control.Exception        ( bracket_ )
 import qualified Control.Exception as Exception
 import Control.Monad            ( when )
 import System.IO
-
-import System.Process           ( rawSystem, runProcess, waitForProcess )
-
+#if defined(mingw32_HOST_OS)
+import Control.Concurrent       ( threadDelay )
+import System.IO.Error          ( isPermissionError )
+#endif
+import System.Process           ( rawSystem, createProcess, waitForProcess
+                                , proc, CreateProcess(..), StdStream(..) )
 import System.Exit              ( ExitCode(..), exitWith )
 import System.Directory         ( removeFile )
 
@@ -38,7 +41,16 @@ rawSystemWithStdOutL action flg prog args outFile = do
   let cmdLine = prog++" "++unwords args++" >"++outFile
   when flg (hPutStrLn stderr ("Executing: " ++ cmdLine))
   hOut <- openFile outFile WriteMode
-  process <- runProcess prog args Nothing Nothing Nothing (Just hOut) Nothing
+  (_ ,_ ,_ , process) <-
+    -- We use createProcess here instead of runProcess since we need to specify
+    -- a custom CreateProcess structure to turn on use_process_jobs when
+    -- available.
+    createProcess
+#if MIN_VERSION_process (1,5,0)
+      (proc prog args){ use_process_jobs = True, std_out = UseHandle  hOut }
+#else
+      (proc prog args){ std_out = UseHandle hOut }
+#endif
   exitStatus <- waitForProcess process
   hClose hOut
   case exitStatus of
@@ -52,13 +64,39 @@ rawSystemWithStdOutL action flg prog args outFile = do
 -- just been exec'ed by a sub-process (Win32 only.)
 finallyRemove :: FilePath -> IO a -> IO a
 finallyRemove fp act =
-  bracket_ (return fp)
+  Exception.bracket_ (return fp)
            (noisyRemove fp)
            act
  where
+  max_retries :: Int
+  max_retries = 5
+
+  noisyRemove :: FilePath -> IO ()
   noisyRemove fpath =
-    catchIO (removeFile fpath)
+    catchIO (removeFileInternal max_retries fpath)
             (\ e -> hPutStrLn stderr ("Failed to remove file " ++ fpath ++ "; error= " ++ show e))
+  removeFileInternal _retries path = do
+#if defined(mingw32_HOST_OS)
+  -- On Windows we have to retry the delete a couple of times.
+  -- The reason for this is that a FileDelete command just marks a
+  -- file for deletion. The file is really only removed when the last
+  -- handle to the file is closed. Unfortunately there are a lot of
+  -- system services that can have a file temporarily opened using a shared
+  -- read-only lock, such as the built in AV and search indexer.
+  --
+  -- We can't really guarantee that these are all off, so what we can do is
+  -- whenever after an rm the file still exists to try again and wait a bit.
+    res <- Exception.try $ removeFile path
+    case res of
+      Right a -> return a
+      Left ex | isPermissionError ex && _retries > 1 -> do
+                  let retries' = _retries - 1
+                  threadDelay ((max_retries - retries') * 200)
+                  removeFileInternal retries' path
+              | otherwise -> Exception.throw ex
+#else
+    removeFile path
+#endif
 
 catchIO :: IO a -> (Exception.IOException -> IO a) -> IO a
 catchIO = Exception.catch
