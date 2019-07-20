@@ -1,3 +1,9 @@
+## 0.68.6
+
+ - Temporary file removals on Windows are not a bit more reliable and should
+   throw less access denied errors.  See #25 and
+   ([#9775](https://gitlab.haskell.org/ghc/ghc/issues/9775))
+
 ## 0.68.5
 
  - Support response files regardless of which GHC `hsc2hs` was compiled

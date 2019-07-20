@@ -24,7 +24,7 @@ Description:
 Category: Development
 Data-Files: template-hsc.h
 build-type: Simple
-tested-with: GHC==8.6.3, GHC==8.4.4, GHC==8.2.2, GHC==8.0.2, GHC==7.10.3, GHC==7.8.4, GHC==7.6.3, GHC==7.4.2, GHC==7.2.2, GHC==7.0.4
+tested-with: GHC==8.6.4, GHC==8.4.4, GHC==8.2.2, GHC==8.0.2, GHC==7.10.3, GHC==7.8.4, GHC==7.6.3, GHC==7.4.2, GHC==7.2.2, GHC==7.0.4
 
 extra-source-files:
   changelog.md
@@ -61,6 +61,9 @@ Executable hsc2hs
                    directory  >= 1.1.0 && < 1.4,
                    filepath   >= 1.2.0 && < 1.5,
                    process    >= 1.1.0 && < 1.7
+
+    if os(windows)
+      Build-Depends: process  >= 1.5.0 && < 1.7
 
     ghc-options:   -Wall
     if flag(in-ghc-tree)
