@@ -45,7 +45,6 @@ rawSystemWithStdOutL outDir action flg prog args outFile = withResponseFile outD
   let cmdLine = prog++" "++unwords args++" >"++outFile
   when flg (hPutStrLn stderr ("Executing: " ++ cmdLine))
   hOut <- openFile outFile WriteMode
-  process <- runProcess prog  Nothing Nothing Nothing (Just hOut) Nothing
   (_ ,_ ,_ , process) <-
     -- We use createProcess here instead of runProcess since we need to specify
     -- a custom CreateProcess structure to turn on use_process_jobs when
