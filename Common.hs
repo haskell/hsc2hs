@@ -10,7 +10,7 @@ import System.IO
 import Control.Concurrent       ( threadDelay )
 import System.IO.Error          ( isPermissionError )
 #endif
-import System.Process           ( rawSystem, createProcess, waitForProcess
+import System.Process           ( createProcess, waitForProcess
                                 , proc, CreateProcess(..), StdStream(..) )
 import System.Exit              ( ExitCode(..), exitWith )
 import System.Directory         ( removeFile )
