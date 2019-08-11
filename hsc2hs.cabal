@@ -1,6 +1,6 @@
 cabal-version: >=1.10
 Name: hsc2hs
-Version: 0.68.5
+Version: 0.68.6
 
 Copyright: 2000, Marcin Kowalczyk
 License: BSD3
@@ -56,7 +56,7 @@ Executable hsc2hs
 
     Other-Extensions: CPP, NoMonomorphismRestriction
 
-    Build-Depends: base       >= 4.3.0 && < 5,
+    Build-Depends: base       >= 4.3.0 && < 4.14,
                    containers >= 0.4.0 && < 0.7,
                    directory  >= 1.1.0 && < 1.4,
                    filepath   >= 1.2.0 && < 1.5,

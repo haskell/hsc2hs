@@ -4,6 +4,10 @@
    throw less access denied errors.  See #25 and
    ([#9775](https://gitlab.haskell.org/ghc/ghc/issues/9775))
 
+ - Accept a leading single quote for data constructor promotion (#13, #17)
+
+ - Support `MonadFail` / base-4.13
+
 ## 0.68.5
 
  - Support response files regardless of which GHC `hsc2hs` was compiled
