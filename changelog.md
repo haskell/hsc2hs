@@ -1,5 +1,7 @@
 ## 0.68.6
 
+ - Supports generation of response files to avoid system filepath limits (#22, #23).
+ 
  - Temporary file removals on Windows are not a bit more reliable and should
    throw less access denied errors.  See #25 and
    ([#9775](https://gitlab.haskell.org/ghc/ghc/issues/9775))
