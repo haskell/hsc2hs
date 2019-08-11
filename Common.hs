@@ -3,6 +3,8 @@ module Common where
 
 import qualified Control.Exception as Exception
 import Control.Monad            ( when )
+import Data.Char                ( isSpace )
+import Data.List                ( foldl' )
 import System.IO
 #if defined(mingw32_HOST_OS)
 import Control.Concurrent       ( threadDelay )
@@ -25,19 +27,21 @@ default_compiler = "gcc"
 writeBinaryFile :: FilePath -> String -> IO ()
 writeBinaryFile fp str = withBinaryFile fp WriteMode $ \h -> hPutStr h str
 
-rawSystemL :: String -> Bool -> FilePath -> [String] -> IO ()
-rawSystemL action flg prog args = do
+rawSystemL :: FilePath -> String -> Bool -> FilePath -> [String] -> IO ()
+rawSystemL outDir action flg prog args = withResponseFile outDir "c2hscall.rsp" args $ \rspFile -> do
   let cmdLine = prog++" "++unwords args
   when flg $ hPutStrLn stderr ("Executing: " ++ cmdLine)
-  exitStatus <- rawSystem prog args
+  (_,_,_,ph) <- createProcess (proc prog ['@':rspFile])
+  exitStatus <- waitForProcess ph
   case exitStatus of
     ExitFailure exitCode -> die $ action ++ " failed "
                                ++ "(exit code " ++ show exitCode ++ ")\n"
                                ++ "command was: " ++ cmdLine ++ "\n"
     _                    -> return ()
 
-rawSystemWithStdOutL :: String -> Bool -> FilePath -> [String] -> FilePath -> IO ()
-rawSystemWithStdOutL action flg prog args outFile = do
+
+rawSystemWithStdOutL :: FilePath -> String -> Bool -> FilePath -> [String] -> FilePath -> IO ()
+rawSystemWithStdOutL outDir action flg prog args outFile = withResponseFile outDir "c2hscall.rsp" args $ \rspFile -> do
   let cmdLine = prog++" "++unwords args++" >"++outFile
   when flg (hPutStrLn stderr ("Executing: " ++ cmdLine))
   hOut <- openFile outFile WriteMode
@@ -47,9 +51,9 @@ rawSystemWithStdOutL action flg prog args outFile = do
     -- available.
     createProcess
 #if MIN_VERSION_process (1,5,0)
-      (proc prog args){ use_process_jobs = True, std_out = UseHandle  hOut }
+      (proc prog ['@':rspFile]){ use_process_jobs = True, std_out = UseHandle  hOut }
 #else
-      (proc prog args){ std_out = UseHandle hOut }
+      (proc prog ['@':rspFile]){ std_out = UseHandle hOut }
 #endif
   exitStatus <- waitForProcess process
   hClose hOut
@@ -103,3 +107,46 @@ catchIO = Exception.catch
 
 onlyOne :: String -> IO a
 onlyOne what = die ("Only one "++what++" may be specified\n")
+
+-- response file handling borrowed from cabal's at Distribution.Simple.Program.ResponseFile
+
+withTempFile :: FilePath    -- ^ Temp dir to create the file in
+             -> String   -- ^ File name template. See 'openTempFile'.
+             -> (FilePath -> Handle -> IO a) -> IO a
+withTempFile tmpDir template action =
+  Exception.bracket
+    (openTempFile tmpDir template)
+    (\(name, handle) -> do hClose handle
+                           removeFile $ name)
+    (uncurry action)
+
+withResponseFile ::
+     FilePath           -- ^ Working directory to create response file in.
+  -> FilePath           -- ^ Template for response file name.
+  -> [String]           -- ^ Arguments to put into response file.
+  -> (FilePath -> IO a)
+  -> IO a
+withResponseFile workDir fileNameTemplate arguments f =
+  withTempFile workDir fileNameTemplate $ \responseFileName hf -> do
+    let responseContents = unlines $ map escapeResponseFileArg arguments
+    hPutStr hf responseContents
+    hClose hf
+    f responseFileName
+
+-- Support a gcc-like response file syntax.  Each separate
+-- argument and its possible parameter(s), will be separated in the
+-- response file by an actual newline; all other whitespace,
+-- single quotes, double quotes, and the character used for escaping
+-- (backslash) are escaped.  The called program will need to do a similar
+-- inverse operation to de-escape and re-constitute the argument list.
+escapeResponseFileArg :: String -> String
+escapeResponseFileArg = reverse . foldl' escape []
+  where
+    escape :: String -> Char -> String
+    escape cs c =
+      case c of
+        '\\'          -> c:'\\':cs
+        '\''          -> c:'\\':cs
+        '"'           -> c:'\\':cs
+        _ | isSpace c -> c:'\\':cs
+          | otherwise -> c:cs

@@ -73,7 +73,7 @@ outputDirect config outName outDir outBase name toks = do
 
     when (cNoCompile config) $ exitWith ExitSuccess
 
-    rawSystemL ("compiling " ++ cProgName) beVerbose (cCompiler config)
+    rawSystemL outDir ("compiling " ++ cProgName) beVerbose (cCompiler config)
         (  ["-c"]
         ++ [cProgName]
         ++ ["-o", oProgName]
@@ -82,14 +82,14 @@ outputDirect config outName outDir outBase name toks = do
     possiblyRemove cProgName $
         withUtilsObject config outDir outBase $ \oUtilsName -> do
 
-      rawSystemL ("linking " ++ oProgName) beVerbose (cLinker config)
+      rawSystemL outDir ("linking " ++ oProgName) beVerbose (cLinker config)
         (  [oProgName, oUtilsName]
         ++ ["-o", progName]
         ++ [f | LinkFlag f <- flags]
         )
       possiblyRemove oProgName $ do
 
-        rawSystemWithStdOutL ("running " ++ execProgName) beVerbose execProgName [] outName
+        rawSystemWithStdOutL outDir ("running " ++ execProgName) beVerbose execProgName [] outName
         possiblyRemove progName $ do
 
           when needsH $ writeBinaryFile outHName $
