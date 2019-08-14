@@ -28,13 +28,16 @@ withUtilsObject config outDir outBase f = do
 
     possiblyRemove cUtilsName $ do
         writeBinaryFile cUtilsName $ unlines $
-            ["#include <stddef.h>",
+             -- These header will cause a mismatch with any mingw-w64 header by
+             -- including system headers before user headers in the hsc file.
+             -- We *MUST* include user headers *BEFORE* automatic ones.  */
+            [outTemplateHeaderCProg (cTemplate config),
+             "",
+             "#include <stddef.h>",
              "#include <string.h>",
              "#include <stdio.h>",
              "#include <stdarg.h>",
              "#include <ctype.h>",
-             "",
-             outTemplateHeaderCProg (cTemplate config),
              "",
              "int hsc_printf(const char *format, ...) {",
              "    int r;",

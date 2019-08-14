@@ -1,3 +1,10 @@
+/* This header will cause a mismatch with any mingw-w64 header by including a
+   system header and then getting included before user headers in the hsc file.
+   So let's define the default to be mingw-w64 C99 so we have any hope of
+   getting GHC to compile with GCC 9+.  */
+#if defined(_WIN32) && !defined(__USE_MINGW_ANSI_STDIO)
+#  define __USE_MINGW_ANSI_STDIO 1
+#endif
 
 /* We need stddef to be able to use size_t. Hopefully this won't cause
    any problems along the lines of ghc trac #2897. */

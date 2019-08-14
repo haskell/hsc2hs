@@ -10,6 +10,13 @@
 
  - Support `MonadFail` / base-4.13
 
+ - Support GHC 8.10.1
+
+ - Include template file as first header in hsc2hs generated C file.
+
+ - On Windows define __USE_MINGW_ANSI_STDIO to 1 instead of 0 when not already
+   defined in standard template header.  This is a more modern default.
+
 ## 0.68.5
 
  - Support response files regardless of which GHC `hsc2hs` was compiled
