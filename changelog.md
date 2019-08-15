@@ -1,7 +1,7 @@
 ## 0.68.6
 
  - Supports generation of response files to avoid system filepath limits (#22, #23).
- 
+
  - Temporary file removals on Windows are not a bit more reliable and should
    throw less access denied errors.  See #25 and
    ([#9775](https://gitlab.haskell.org/ghc/ghc/issues/9775))
@@ -14,7 +14,7 @@
 
  - Include template file as first header in hsc2hs generated C file.
 
- - On Windows define __USE_MINGW_ANSI_STDIO to 1 instead of 0 when not already
+ - On Windows define `__USE_MINGW_ANSI_STDIO` to 1 instead of 0 when not already
    defined in standard template header.  This is a more modern default.
 
 ## 0.68.5
