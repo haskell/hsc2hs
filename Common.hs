@@ -14,6 +14,7 @@ import System.Process           ( createProcess, waitForProcess
                                 , proc, CreateProcess(..), StdStream(..) )
 import System.Exit              ( ExitCode(..), exitWith )
 import System.Directory         ( removeFile )
+import System.FilePath          ( (</>) )
 
 die :: String -> IO a
 die s = hPutStr stderr s >> exitWith (ExitFailure 1)
@@ -27,11 +28,21 @@ default_compiler = "gcc"
 writeBinaryFile :: FilePath -> String -> IO ()
 writeBinaryFile fp str = withBinaryFile fp WriteMode $ \h -> hPutStr h str
 
-rawSystemL :: FilePath -> String -> Bool -> FilePath -> [String] -> IO ()
-rawSystemL outDir action flg prog args = withResponseFile outDir "c2hscall.rsp" args $ \rspFile -> do
+rawSystemL :: FilePath -> FilePath -> String -> Bool -> FilePath -> [String] -> IO ()
+rawSystemL outDir outBase action flg prog args = withResponseFile outDir outBase args $ \rspFile -> do
   let cmdLine = prog++" "++unwords args
   when flg $ hPutStrLn stderr ("Executing: " ++ cmdLine)
-  (_,_,_,ph) <- createProcess (proc prog ['@':rspFile])
+  (_,_,_,ph) <- createProcess
+  -- Because of the response files being written and removed after the process
+  -- terminates we now need to use process jobs here to correctly wait for all
+  -- child processes to terminate.  Not doing so would causes a race condition
+  -- between the last child dieing and not holding a lock on the response file
+  -- and the response file getting deleted.
+#if MIN_VERSION_process (1,5,0)
+    (proc prog ['@':rspFile]){ use_process_jobs = True }
+#else
+    (proc prog ['@':rspFile])
+#endif
   exitStatus <- waitForProcess ph
   case exitStatus of
     ExitFailure exitCode -> die $ action ++ " failed "
@@ -40,8 +51,8 @@ rawSystemL outDir action flg prog args = withResponseFile outDir "c2hscall.rsp" 
     _                    -> return ()
 
 
-rawSystemWithStdOutL :: FilePath -> String -> Bool -> FilePath -> [String] -> FilePath -> IO ()
-rawSystemWithStdOutL outDir action flg prog args outFile = withResponseFile outDir "c2hscall.rsp" args $ \rspFile -> do
+rawSystemWithStdOutL :: FilePath -> FilePath -> String -> Bool -> FilePath -> [String] -> FilePath -> IO ()
+rawSystemWithStdOutL outDir outBase action flg prog args outFile = withResponseFile outDir outBase args $ \rspFile -> do
   let cmdLine = prog++" "++unwords args++" >"++outFile
   when flg (hPutStrLn stderr ("Executing: " ++ cmdLine))
   hOut <- openFile outFile WriteMode
@@ -110,15 +121,15 @@ onlyOne what = die ("Only one "++what++" may be specified\n")
 
 -- response file handling borrowed from cabal's at Distribution.Simple.Program.ResponseFile
 
-withTempFile :: FilePath    -- ^ Temp dir to create the file in
-             -> String   -- ^ File name template. See 'openTempFile'.
+withTempFile :: FilePath -- ^ Temp dir to create the file in
+             -> FilePath -- ^ Name of the hsc file being processed
              -> (FilePath -> Handle -> IO a) -> IO a
-withTempFile tmpDir template action =
+withTempFile tmpDir outBase action =
   Exception.bracket
-    (openTempFile tmpDir template)
-    (\(name, handle) -> do hClose handle
-                           removeFile $ name)
-    (uncurry action)
+    (openFile rspFile ReadWriteMode)
+    (\handle -> finallyRemove rspFile $ hClose handle)
+    (action rspFile)
+    where rspFile = tmpDir </> (outBase ++"_hsc_make.rsp")
 
 withResponseFile ::
      FilePath           -- ^ Working directory to create response file in.
@@ -126,8 +137,8 @@ withResponseFile ::
   -> [String]           -- ^ Arguments to put into response file.
   -> (FilePath -> IO a)
   -> IO a
-withResponseFile workDir fileNameTemplate arguments f =
-  withTempFile workDir fileNameTemplate $ \responseFileName hf -> do
+withResponseFile workDir outBase arguments f =
+  withTempFile workDir outBase $ \responseFileName hf -> do
     let responseContents = unlines $ map escapeResponseFileArg arguments
     hPutStr hf responseContents
     hClose hf
