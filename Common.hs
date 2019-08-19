@@ -32,16 +32,14 @@ rawSystemL :: FilePath -> FilePath -> String -> Bool -> FilePath -> [String] -> 
 rawSystemL outDir outBase action flg prog args = withResponseFile outDir outBase args $ \rspFile -> do
   let cmdLine = prog++" "++unwords args
   when flg $ hPutStrLn stderr ("Executing: " ++ cmdLine)
-  (_,_,_,ph) <- createProcess
+  (_,_,_,ph) <- createProcess (proc prog ['@':rspFile])
   -- Because of the response files being written and removed after the process
   -- terminates we now need to use process jobs here to correctly wait for all
   -- child processes to terminate.  Not doing so would causes a race condition
   -- between the last child dieing and not holding a lock on the response file
   -- and the response file getting deleted.
 #if MIN_VERSION_process (1,5,0)
-    (proc prog ['@':rspFile]){ use_process_jobs = True }
-#else
-    (proc prog ['@':rspFile])
+    { use_process_jobs = True }
 #endif
   exitStatus <- waitForProcess ph
   case exitStatus of
