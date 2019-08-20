@@ -123,6 +123,13 @@ withTempFile :: FilePath -- ^ Temp dir to create the file in
              -> FilePath -- ^ Name of the hsc file being processed
              -> (FilePath -> Handle -> IO a) -> IO a
 withTempFile tmpDir outBase action =
+  -- openTempFile isn't atomic under Windows until GHC 8.10, this means it's
+  -- unsuitable for use on Windows for creating random temp files.  For hsc2hs
+  -- this doesn't matter much since hsc2hs is single threaded and always
+  -- finishes one part of it's compilation pipeline before moving on to the next.
+  -- This means we can just use a deterministic file as a temp file.  This file
+  -- will always be cleaned up before we move on to the next phase so we would
+  -- never get a clash.  This follows the same pattern as in DirectCodegen.hs.
   Exception.bracket
     (openFile rspFile ReadWriteMode)
     (\handle -> finallyRemove rspFile $ hClose handle)
