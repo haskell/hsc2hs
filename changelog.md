@@ -1,6 +1,9 @@
 ## 0.68.6
 
- - Supports generation of response files to avoid system filepath limits (#22, #23).
+ - Supports generation of response files to avoid system filepath
+   limits (#22, #23)
+
+ - Fix non-deterministic failures for response file handlings (#29)
 
  - Temporary file removals on Windows are not a bit more reliable and should
    throw less access denied errors.  See #25 and
@@ -10,12 +13,10 @@
 
  - Support `MonadFail` / base-4.13
 
- - Support GHC 8.10.1
-
- - Include template file as first header in hsc2hs generated C file.
+ - Include template file as first header in hsc2hs generated C file (#28)
 
  - On Windows define `__USE_MINGW_ANSI_STDIO` to 1 instead of 0 when not already
-   defined in standard template header.  This is a more modern default.
+   defined in standard template header.  This is a more modern default (#28)
 
 ## 0.68.5
 
