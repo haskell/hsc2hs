@@ -4,6 +4,7 @@ module Common where
 import qualified Control.Exception as Exception
 import Control.Monad            ( when )
 import Data.Char                ( isSpace )
+import Data.Bits                ( xor )
 import Data.List                ( foldl' )
 import System.IO
 #if defined(mingw32_HOST_OS)
@@ -13,8 +14,9 @@ import System.IO.Error          ( isPermissionError )
 import System.Process           ( createProcess, waitForProcess
                                 , proc, CreateProcess(..), StdStream(..) )
 import System.Exit              ( ExitCode(..), exitWith )
-import System.Directory         ( removeFile )
+import System.Directory         ( removeFile, doesFileExist )
 import System.FilePath          ( (</>) )
+import System.CPUTime           ( getCPUTime )
 
 die :: String -> IO a
 die s = hPutStr stderr s >> exitWith (ExitFailure 1)
@@ -121,8 +123,9 @@ onlyOne what = die ("Only one "++what++" may be specified\n")
 
 withTempFile :: FilePath -- ^ Temp dir to create the file in
              -> FilePath -- ^ Name of the hsc file being processed
+             -> String   -- ^ Name of the action requiring a tmp file. Must be unique
              -> (FilePath -> Handle -> IO a) -> IO a
-withTempFile tmpDir outBase action =
+withTempFile tmpDir outBase token action = do
   -- openTempFile isn't atomic under Windows until GHC 8.10. This means it's
   -- unsuitable for use on Windows for creating random temp files.  For hsc2hs
   -- this doesn't matter much since hsc2hs is single threaded and always
@@ -130,11 +133,14 @@ withTempFile tmpDir outBase action =
   -- This means we can just use a deterministic file as a temp file.  This file
   -- will always be cleaned up before we move on to the next phase so we would
   -- never get a clash.  This follows the same pattern as in DirectCodegen.hs.
+  exists <- doesFileExist rspFile
+  -- Sanity check to see that nothing invalidated this assumption
+  when exists $ onlyOne rspFile
   Exception.bracket
     (openFile rspFile ReadWriteMode)
     (\handle -> finallyRemove rspFile $ hClose handle)
     (action rspFile)
-    where rspFile = tmpDir </> (outBase ++"_hsc_make.rsp")
+    where rspFile = tmpDir </> (outBase ++"_hsc_" ++ token ++ ".rsp")
 
 withResponseFile ::
      FilePath           -- ^ Working directory to create response file in.
@@ -142,8 +148,12 @@ withResponseFile ::
   -> [String]           -- ^ Arguments to put into response file.
   -> (FilePath -> IO a)
   -> IO a
-withResponseFile workDir outBase arguments f =
-  withTempFile workDir outBase $ \responseFileName hf -> do
+withResponseFile workDir outBase arguments f = do
+  -- Generate a reasonable random number for token to prevent clashes if this
+  -- function is used recursively.
+  cpuTime <- getCPUTime
+  let token = show $ (fromIntegral $ length arguments) `xor` cpuTime
+  withTempFile workDir outBase token $ \responseFileName hf -> do
     let responseContents = unlines $ map escapeResponseFileArg arguments
     hPutStr hf responseContents
     hClose hf
