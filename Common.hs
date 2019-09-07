@@ -11,12 +11,12 @@ import Control.Concurrent       ( threadDelay )
 import Data.Bits                ( xor )
 import System.IO.Error          ( isPermissionError )
 import System.CPUTime           ( getCPUTime )
+import System.FilePath          ( (</>) )
 #endif
 import System.Process           ( createProcess, waitForProcess
                                 , proc, CreateProcess(..), StdStream(..) )
 import System.Exit              ( ExitCode(..), exitWith )
 import System.Directory         ( removeFile )
-import System.FilePath          ( (</>) )
 
 die :: String -> IO a
 die s = hPutStr stderr s >> exitWith (ExitFailure 1)
@@ -127,7 +127,7 @@ withTempFile :: FilePath -- ^ Temp dir to create the file in
              -> Int      -- ^ Random seed for tmp name
              -> (FilePath -> Handle -> IO a) -> IO a
 #if !defined(mingw32_HOST_OS)
-withTempFile tmpDir outBase template _seed action = do
+withTempFile tmpDir _outBase template _seed action = do
   Exception.bracket
     (openTempFile tmpDir template)
     (\(name, handle) -> do hClose handle
@@ -138,7 +138,8 @@ withTempFile tmpDir outBase template seed action = do
   -- openTempFile isn't atomic under Windows. This means it's unsuitable for
   -- use on Windows for creating random temp files.  Instead we'll try to create
   -- a reasonably random name based on the current outBase.  If the
-  -- Sanity check to see that nothing invalidated this assumption
+  -- Sanity check to see that nothing invalidated this assumption is violated
+  -- then we retry a few times otherwise an error is raised.
   rspFile <- findTmp 5
   Exception.bracket
     (openFile rspFile ReadWriteMode)
@@ -158,8 +159,7 @@ withTempFile tmpDir outBase template seed action = do
             -- create the file to reserve it.  If the file already exists we try
             -- again.
             res <- Exception.try $ openFile file ReadMode
-            let ty = undefined :: Either Exception.SomeException Handle
-            case res `asTypeOf` ty of
+            case (res :: Either Exception.SomeException Handle) of
               Left  _ -> return file
               Right h -> hClose h >> findTmp (n-1)
 #endif
