@@ -171,7 +171,7 @@ withResponseFile ::
   -> (FilePath -> IO a)
   -> IO a
 withResponseFile workDir outBase arguments f =
-  withTempFile workDir outBase "c2hscall.rsp" (length arguments) $ \responseFileName hf -> do
+  withTempFile workDir outBase "hsc2hscall.rsp" (length arguments) $ \responseFileName hf -> do
     let responseContents = unlines $ map escapeResponseFileArg arguments
     hPutStr hf responseContents
     hClose hf
