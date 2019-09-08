@@ -1,3 +1,7 @@
+## 0.68.7
+
+ - Fix race condition when using response files (#30)
+
 ## 0.68.6
 
  - Supports generation of response files to avoid system filepath
