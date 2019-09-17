@@ -226,6 +226,15 @@ outputSpecial output (z@ZCursor {zCursor=Special pos@(SourcePos file line _)  ke
                              (\i -> "(\\hsc_ptr -> peekByteOff hsc_ptr " ++ show i ++ ")") >> return False
        "poke" -> outputConst ("offsetof(" ++ value ++ ")")
                              (\i -> "(\\hsc_ptr -> pokeByteOff hsc_ptr " ++ show i ++ ")") >> return False
+       "readByteArray" -> outputByteArrayOperation True "readByteArray"
+       "writeByteArray" -> outputByteArrayOperation True "writeByteArray"
+       "indexByteArray" -> outputByteArrayOperation True "indexByteArray"
+       "readByteArrayHash" -> outputByteArrayOperation False "readByteArray#"
+       "writeByteArrayHash" -> outputByteArrayOperation False "writeByteArray#"
+       "indexByteArrayHash" -> outputByteArrayOperation False "indexByteArray#"
+       "readOffAddrHash" -> outputByteArrayOperation False "readOffAddr#"
+       "writeOffAddrHash" -> outputByteArrayOperation False "writeOffAddr#"
+       "indexOffAddrHash" -> outputByteArrayOperation False "indexOffAddr#"
        "ptr" -> outputConst ("offsetof(" ++ value ++ ")")
                             (\i -> "(\\hsc_ptr -> hsc_ptr `plusPtr` " ++ show i ++ ")") >> return False
        "type" -> computeType z >>= output >> return False
@@ -236,7 +245,28 @@ outputSpecial output (z@ZCursor {zCursor=Special pos@(SourcePos file line _)  ke
        "define" -> return True
        "undef" -> return True
        _ -> testFail pos ("directive " ++ key ++ " cannot be handled in cross-compilation mode")
-    where outputConst value' formatter = computeConst z value' >>= (output . formatter)
+    where
+      outputConst value' formatter = computeConst z value' >>= (output . formatter)
+      -- GHC's ByteArray# type only supports read/write/index in an aligned
+      -- fashion. The index is always given in elements, not bytes. So, we
+      -- must divide the field's offset in bytes by its size to get index in
+      -- terms of elements.
+      outputByteArrayOperation boxed operation = case break (== ',') value of
+         (typ,',':field) -> do
+           byteOffset <- computeConst z ("offsetof(" ++ value ++ ")")
+           typSize <- computeConst z ("sizeof(" ++ typ ++ ")")
+           -- This is the FIELD_SIZEOF macro as defined in the linux kernel.
+           fieldSize <- computeConst z ("sizeof(((" ++ typ ++ "*)0)->" ++ field ++ ")")
+           when (not (isPowerOfTwo fieldSize)) (testFail pos ("#error " ++ value))
+           let (elemOffset,r1) = divMod byteOffset fieldSize
+           when (r1 /= 0) (testFail pos ("#error " ++ value))
+           let (typFieldRatio,r2) = divMod typSize fieldSize
+           when (r2 /= 0) (testFail pos ("#error " ++ value))
+           if boxed
+             then output ("(\\hsc_arr hsc_ix -> " ++ operation ++ " hsc_arr (" ++ show elemOffset ++ " + (hsc_ix * " ++ show typFieldRatio ++ ")))")
+             else output ("(\\hsc_arr hsc_ix -> " ++ operation ++ " hsc_arr (" ++ show elemOffset ++ "# +# (hsc_ix *# " ++ show typFieldRatio ++ "#)))")
+           return False
+         _ -> testFail pos ("#error " ++ value)
 outputSpecial _ _ = error "outputSpecial's argument isn't a Special"
 
 outputText :: (Bool, Bool) -> (String -> TestMonad ()) -> SourcePos -> String
@@ -405,6 +435,12 @@ binarySearch z nonNegative l u = do
             l <= l' && l' <= u' && u' <= u &&  -- @l <= l' <= u' <= u@
             u'-l' < u-l)                       -- @|u' - l'| < |u - l|@
            (binarySearch z nonNegative l' u')
+
+isPowerOfTwo :: Integer -> Bool
+isPowerOfTwo 0 = False
+isPowerOfTwo 1 = True
+isPowerOfTwo n = case divMod n 2 of
+  (m,r) -> if r == 0 then isPowerOfTwo m else False
 
 -- Establishes bounds on the unknown integer. By searching increasingly
 -- large powers of 2, it'll bracket an integer x by lower & upper

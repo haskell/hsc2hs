@@ -33,6 +33,9 @@
  - Add support for haskell files that use a leading single quote for promoted
    data constructors.
 
+ - Add macros for accessing runtime-managed bytearrays. This uses the naming
+   scheme from `primitive` and is intended to be used with that library.
+
 ## 0.68.4
 
  - Add support to read command line arguments supplied via response files
