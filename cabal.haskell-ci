@@ -1,4 +1,4 @@
 ghc-head:      True
 tests:         >=7.4
 benchmarks:    >=7.4
-unconstrained: >=7.2
+installed:     +all -process

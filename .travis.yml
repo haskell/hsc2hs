@@ -129,7 +129,7 @@ install:
   - |
     echo "packages: ." >> cabal.project
   - |
-  - "for pkg in $($HCPKG list --simple-output); do echo $pkg | sed 's/-[^-]*$//' | (grep -vE -- '^(hsc2hs)$' || true) | sed 's/^/constraints: /' | sed 's/$/ installed/' >> cabal.project.local; done"
+  - "for pkg in $($HCPKG list --simple-output); do echo $pkg | sed 's/-[^-]*$//' | (grep -vE -- '^(hsc2hs|process)$' || true) | sed 's/^/constraints: /' | sed 's/$/ installed/' >> cabal.project.local; done"
   - cat cabal.project || true
   - cat cabal.project.local || true
   - if [ -f "./configure.ac" ]; then (cd "." && autoreconf -i); fi
@@ -154,7 +154,7 @@ script:
   - |
     echo "packages: ${PKGDIR_hsc2hs}" >> cabal.project
   - |
-  - "for pkg in $($HCPKG list --simple-output); do echo $pkg | sed 's/-[^-]*$//' | (grep -vE -- '^(hsc2hs)$' || true) | sed 's/^/constraints: /' | sed 's/$/ installed/' >> cabal.project.local; done"
+  - "for pkg in $($HCPKG list --simple-output); do echo $pkg | sed 's/-[^-]*$//' | (grep -vE -- '^(hsc2hs|process)$' || true) | sed 's/^/constraints: /' | sed 's/$/ installed/' >> cabal.project.local; done"
   - cat cabal.project || true
   - cat cabal.project.local || true
   # Building...
@@ -168,8 +168,8 @@ script:
   # cabal check...
   - (cd ${PKGDIR_hsc2hs} && ${CABAL} -vnormal check)
   # Building without installed constraints for packages in global-db...
-  - if [ $HCNUMVER -ge 70200 ] ; then rm -f cabal.project.local ; fi
-  - if [ $HCNUMVER -ge 70200 ] ; then ${CABAL} v2-build $WITHCOMPILER --disable-tests --disable-benchmarks all | color_cabal_output ; fi
+  - rm -f cabal.project.local
+  - ${CABAL} v2-build $WITHCOMPILER --disable-tests --disable-benchmarks all | color_cabal_output
 
 # REGENDATA ["--output=.travis.yml","--config=cabal.haskell-ci","cabal.project"]
 # EOF
