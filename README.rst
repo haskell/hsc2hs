@@ -1,5 +1,6 @@
 ``hsc2hs``: Haskell Pre-processor for C FFI bindings
 ####################################################
+|Hackage| |Linux build| |Windows build|
 
 The ``hsc2hs`` command can be used to automate some parts of the process
 of writing Haskell bindings to C code. It reads an almost-Haskell source
@@ -247,3 +248,10 @@ The following are unsupported:
 -  ``#{let}``
 -  ``#{def}``
 -  Custom constructs
+
+.. |Hackage| image:: https://img.shields.io/hackage/v/hsc2hs.svg
+    :target: http://hackage.haskell.org/package/hsc2hs
+.. |Linux build| image:: https://img.shields.io/travis/haskell/hsc2hs.svg
+    :target: https://travis-ci.org/haskell/hsc2hs
+.. |Windows build| image:: https://ci.appveyor.com/api/projects/status/ee434vcpvit2qeqh?svg=true
+    :target: https://ci.appveyor.com/project/RyanGlScott/hsc2hs
