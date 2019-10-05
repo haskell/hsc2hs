@@ -52,7 +52,11 @@ Executable hsc2hs
         ATTParser
         UtilsCodegen
         Compat.ResponseFile
+        Compat.TempFile
         Paths_hsc2hs
+
+    c-sources:
+        cbits/utils.c
 
     Other-Extensions: CPP, NoMonomorphismRestriction
 
