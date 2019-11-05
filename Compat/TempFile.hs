@@ -3,12 +3,21 @@
 {-# LANGUAGE Safe #-}
 #endif
 
+-- This module backports `openTempFile` from GHC 8.10 to hsc2hs in order to get
+-- an atomic `openTempFile` implementation on Windows when using older GHC
+-- compilers.
+-- See also https://gitlab.haskell.org/ghc/ghc/issues/10731
+--
+-- When hsc2hs supports GHC 8.10 as minimum then this module can be removed.
 module Compat.TempFile (
     openBinaryTempFile,
     openTempFile
   ) where
 
-#if defined(mingw32_HOST_OS)
+#define NEEDS_TEMP_WORKAROUND (!MIN_VERSION_base(4,14,0) \
+                               && defined(mingw32_HOST_OS))
+
+#if NEEDS_TEMP_WORKAROUND
 import Data.Bits
 import Foreign.C.Error
 import Foreign.C.String
@@ -50,7 +59,7 @@ openTempFile :: FilePath   -- ^ Directory in which to create the file
                            -- separator characters.
              -> IO (FilePath, Handle)
 openTempFile tmp_dir template
-#if defined(mingw32_HOST_OS)
+#if NEEDS_TEMP_WORKAROUND
     = openTempFile' "openTempFile" tmp_dir template False 0o600
 #else
     = IOUtils.openTempFile tmp_dir template
@@ -59,14 +68,14 @@ openTempFile tmp_dir template
 -- | Like 'openTempFile', but opens the file in binary mode. See 'openBinaryFile' for more comments.
 openBinaryTempFile :: FilePath -> String -> IO (FilePath, Handle)
 openBinaryTempFile tmp_dir template
-#if defined(mingw32_HOST_OS)
+#if NEEDS_TEMP_WORKAROUND
     = openTempFile' "openBinaryTempFile" tmp_dir template True 0o600
 #else
     = IOUtils.openBinaryTempFile tmp_dir template
 #endif
 
 
-#if defined(mingw32_HOST_OS)
+#if NEEDS_TEMP_WORKAROUND
 openTempFile' :: String -> FilePath -> String -> Bool -> CMode
               -> IO (FilePath, Handle)
 openTempFile' loc tmp_dir template binary mode
@@ -139,4 +148,4 @@ output_flags = std_flags
 std_flags, output_flags, rw_flags :: CInt
 std_flags    = o_NONBLOCK   .|. o_NOCTTY
 rw_flags     = output_flags .|. o_RDWR
-#endif /* mingw32_HOST_OS */
+#endif /* NEEDS_TEMP_WORKAROUND */
