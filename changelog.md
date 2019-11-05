@@ -1,6 +1,8 @@
 ## 0.68.7
 
  - Fix race condition when using response files (#30)
+ - Add extra diagnostics when hsc2hs sub-process fails
+   and make TempFile creation fully atomic on Windows. See (#33)
 
 ## 0.68.6
 

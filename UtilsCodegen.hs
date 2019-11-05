@@ -79,7 +79,7 @@ withUtilsObject config outDir outBase f = do
 
         possiblyRemove oUtilsName $ do
            unless (cNoCompile config) $
-               rawSystemL outDir outBase ("compiling " ++ cUtilsName)
+               rawSystemL outDir (outBase ++ "_utils") ("compiling " ++ cUtilsName)
                           beVerbose
                           (cCompiler config)
                           (["-c", cUtilsName, "-o", oUtilsName] ++

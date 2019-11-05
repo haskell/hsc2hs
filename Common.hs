@@ -2,16 +2,14 @@
 module Common where
 
 import qualified Control.Exception as Exception
+import qualified Compat.TempFile as Compat
 import Control.Monad            ( when )
 import Data.Char                ( isSpace )
 import Data.List                ( foldl' )
 import System.IO
 #if defined(mingw32_HOST_OS)
 import Control.Concurrent       ( threadDelay )
-import Data.Bits                ( xor )
 import System.IO.Error          ( isPermissionError )
-import System.CPUTime           ( getCPUTime )
-import System.FilePath          ( (</>) )
 #endif
 import System.Process           ( createProcess, waitForProcess
                                 , proc, CreateProcess(..), StdStream(..) )
@@ -33,46 +31,62 @@ writeBinaryFile fp str = withBinaryFile fp WriteMode $ \h -> hPutStr h str
 rawSystemL :: FilePath -> FilePath -> String -> Bool -> FilePath -> [String] -> IO ()
 rawSystemL outDir outBase action flg prog args = withResponseFile outDir outBase args $ \rspFile -> do
   let cmdLine = prog++" "++unwords args
-  when flg $ hPutStrLn stderr ("Executing: " ++ cmdLine)
-  (_,_,_,ph) <- createProcess (proc prog ['@':rspFile])
+  when flg $ hPutStrLn stderr ("Executing: (@" ++ rspFile ++ ") " ++ cmdLine)
+  (_ ,_ ,progerr ,ph) <- createProcess (proc prog ['@':rspFile])
   -- Because of the response files being written and removed after the process
   -- terminates we now need to use process jobs here to correctly wait for all
   -- child processes to terminate.  Not doing so would causes a race condition
   -- between the last child dieing and not holding a lock on the response file
   -- and the response file getting deleted.
-#if MIN_VERSION_process (1,5,0)
-    { use_process_jobs = True }
+    { std_err = CreatePipe
+#if MIN_VERSION_process(1,5,0)
+    , use_process_jobs = True
 #endif
+    }
   exitStatus <- waitForProcess ph
   case exitStatus of
-    ExitFailure exitCode -> die $ action ++ " failed "
-                               ++ "(exit code " ++ show exitCode ++ ")\n"
-                               ++ "command was: " ++ cmdLine ++ "\n"
+    ExitFailure exitCode ->
+      do errdata <- maybeReadHandle progerr
+         die $ action ++ " failed "
+                      ++ "(exit code "    ++ show exitCode ++ ")\n"
+                      ++ "rsp file was: " ++ show rspFile ++ "\n"
+                      ++ "command was: "  ++ cmdLine ++ "\n"
+                      ++ "error: "        ++ errdata ++ "\n"
     _                    -> return ()
 
 
 rawSystemWithStdOutL :: FilePath -> FilePath -> String -> Bool -> FilePath -> [String] -> FilePath -> IO ()
 rawSystemWithStdOutL outDir outBase action flg prog args outFile = withResponseFile outDir outBase args $ \rspFile -> do
   let cmdLine = prog++" "++unwords args++" >"++outFile
-  when flg (hPutStrLn stderr ("Executing: " ++ cmdLine))
+  when flg (hPutStrLn stderr ("Executing: (@" ++ rspFile ++ ") " ++ cmdLine))
   hOut <- openFile outFile WriteMode
-  (_ ,_ ,_ , process) <-
+  (_ ,_ ,progerr , process) <-
     -- We use createProcess here instead of runProcess since we need to specify
     -- a custom CreateProcess structure to turn on use_process_jobs when
     -- available.
     createProcess
-#if MIN_VERSION_process (1,5,0)
-      (proc prog ['@':rspFile]){ use_process_jobs = True, std_out = UseHandle  hOut }
-#else
-      (proc prog ['@':rspFile]){ std_out = UseHandle hOut }
+      (proc prog  ['@':rspFile])
+         { std_out = UseHandle hOut, std_err = CreatePipe
+#if MIN_VERSION_process(1,5,0)
+         , use_process_jobs = True
 #endif
+         }
   exitStatus <- waitForProcess process
   hClose hOut
   case exitStatus of
-    ExitFailure exitCode -> die $ action ++ " failed "
-                               ++ "(exit code " ++ show exitCode ++ ")\n"
-                               ++ "command was: " ++ cmdLine ++ "\n"
+    ExitFailure exitCode ->
+      do errdata <- maybeReadHandle progerr
+         die $ action ++ " failed "
+                      ++ "(exit code "    ++ show exitCode ++ ")\n"
+                      ++ "rsp file was: " ++ show rspFile ++ "\n"
+                      ++ "output file:"   ++ show outFile ++ "\n"
+                      ++ "command was: "  ++ cmdLine ++ "\n"
+                      ++ "error: "        ++ errdata ++ "\n"
     _                    -> return ()
+
+maybeReadHandle :: Maybe Handle -> IO String
+maybeReadHandle Nothing  = return "<no data>"
+maybeReadHandle (Just h) = hGetContents h
 
 -- delay the cleanup of generated files until the end; attempts to
 -- get around intermittent failure to delete files which has
@@ -126,43 +140,11 @@ withTempFile :: FilePath -- ^ Temp dir to create the file in
              -> String   -- ^ Template for temp file
              -> Int      -- ^ Random seed for tmp name
              -> (FilePath -> Handle -> IO a) -> IO a
-#if !defined(mingw32_HOST_OS)
 withTempFile tmpDir _outBase template _seed action = do
   Exception.bracket
-    (openTempFile tmpDir template)
-    (\(name, handle) -> do hClose handle
-                           removeFile $ name)
+    (Compat.openTempFile tmpDir template)
+    (\(name, handle) -> finallyRemove name $ hClose handle)
     (uncurry action)
-#else
-withTempFile tmpDir outBase template seed action = do
-  -- openTempFile isn't atomic under Windows. This means it's unsuitable for
-  -- use on Windows for creating random temp files.  Instead we'll try to create
-  -- a reasonably random name based on the current outBase.  If the
-  -- Sanity check to see that nothing invalidated this assumption is violated
-  -- then we retry a few times otherwise an error is raised.
-  rspFile <- findTmp 5
-  Exception.bracket
-    (openFile rspFile ReadWriteMode)
-    (\handle -> finallyRemove rspFile $ hClose handle)
-    (action rspFile)
-    where findTmp :: Int -> IO FilePath
-          findTmp 0 = die "Could not find unallocated temp file\n"
-          findTmp n = do
-            -- Generate a reasonable random number for token to prevent clashes if this
-            -- function is used recursively.
-            cpuTime <- getCPUTime
-            let token = show $ (fromIntegral seed) `xor` cpuTime
-                file = tmpDir </> (outBase ++ token ++ template)
-            -- Because of the resolution of the CPU timers there exists a small
-            -- possibility that multiple nested calls to withTempFile get the
-            -- same "token".  To reduce the risk to almost zero we immediately
-            -- create the file to reserve it.  If the file already exists we try
-            -- again.
-            res <- Exception.try $ openFile file ReadMode
-            case (res :: Either Exception.SomeException Handle) of
-              Left  _ -> return file
-              Right h -> hClose h >> findTmp (n-1)
-#endif
 
 withResponseFile ::
      FilePath           -- ^ Working directory to create response file in.
