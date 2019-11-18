@@ -3,6 +3,8 @@
  - Fix race condition when using response files (#30)
  - Add extra diagnostics when hsc2hs sub-process fails
    and make TempFile creation fully atomic on Windows. See (#33)
+ - Inline part of the process library in order to make Windows wait correctly
+   for the termination of a process when execv or spawn are used. See (#39)
 
 ## 0.68.6
 

@@ -3,6 +3,7 @@ module Common where
 
 import qualified Control.Exception as Exception
 import qualified Compat.TempFile as Compat
+import qualified Compat.Process  as Proc
 import Control.Monad            ( when )
 import Data.Char                ( isSpace )
 import Data.List                ( foldl' )
@@ -11,8 +12,8 @@ import System.IO
 import Control.Concurrent       ( threadDelay )
 import System.IO.Error          ( isPermissionError )
 #endif
-import System.Process           ( createProcess, waitForProcess
-                                , proc, CreateProcess(..), StdStream(..) )
+import System.Process           ( createProcess, proc, CreateProcess(..)
+                                , StdStream(..) )
 import System.Exit              ( ExitCode(..), exitWith )
 import System.Directory         ( removeFile )
 
@@ -43,7 +44,7 @@ rawSystemL outDir outBase action flg prog args = withResponseFile outDir outBase
     , use_process_jobs = True
 #endif
     }
-  exitStatus <- waitForProcess ph
+  exitStatus <- Proc.waitForProcess ph
   case exitStatus of
     ExitFailure exitCode ->
       do errdata <- maybeReadHandle progerr
@@ -71,7 +72,7 @@ rawSystemWithStdOutL outDir outBase action flg prog args outFile = withResponseF
          , use_process_jobs = True
 #endif
          }
-  exitStatus <- waitForProcess process
+  exitStatus <- Proc.waitForProcess process
   hClose hOut
   case exitStatus of
     ExitFailure exitCode ->
