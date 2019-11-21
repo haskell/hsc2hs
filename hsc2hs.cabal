@@ -53,6 +53,7 @@ Executable hsc2hs
         UtilsCodegen
         Compat.ResponseFile
         Compat.TempFile
+        Compat.Process
         Paths_hsc2hs
 
     c-sources:
