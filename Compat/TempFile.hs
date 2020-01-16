@@ -14,8 +14,11 @@ module Compat.TempFile (
     openTempFile
   ) where
 
-#define NEEDS_TEMP_WORKAROUND (!MIN_VERSION_base(4,14,0) \
-                               && defined(mingw32_HOST_OS))
+#if !MIN_VERSION_base(4,14,0) && defined(mingw32_HOST_OS)
+#define NEEDS_TEMP_WORKAROUND 1
+#else
+#define NEEDS_TEMP_WORKAROUND 0
+#endif
 
 #if NEEDS_TEMP_WORKAROUND
 import Data.Bits
