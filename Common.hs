@@ -21,7 +21,7 @@ die :: String -> IO a
 die s = hPutStr stderr s >> exitWith (ExitFailure 1)
 
 default_compiler :: String
-default_compiler = "gcc"
+default_compiler = "cc"
 
 ------------------------------------------------------------------------
 -- Write the output files.
