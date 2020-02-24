@@ -1,3 +1,7 @@
+## unreleased
+
+ - The C compiler is now assumed to be called `cc` instead of `gcc`
+
 ## 0.68.7
 
  - Fix race condition when using response files (#30)
