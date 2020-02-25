@@ -67,7 +67,9 @@ Executable hsc2hs
                    process    >= 1.1.0 && < 1.7
 
     if os(windows)
-      Build-Depends: process  >= 1.5.0 && < 1.7
+      -- N.B. Job object support was irreparably broken prior to 1.6.8.
+      -- See https://github.com/haskell/process/issues/167.
+      Build-Depends: process  >= 1.6.8 && < 1.7
 
     ghc-options:   -Wall
     if flag(in-ghc-tree)
