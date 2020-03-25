@@ -1,11 +1,11 @@
-## unreleased
-
- - The C compiler is now assumed to be called `cc` instead of `gcc`
-
 ## 0.68.7
 
+ - The C compiler is now assumed to be called `cc` instead of `gcc`
+   by default (#42)
+
  - Fix race condition when using response files (#30)
- - Add extra diagnostics when hsc2hs sub-process fails
+
+ - Add extra diagnostics when `hsc2hs` sub-process fails
    and make TempFile creation fully atomic on Windows. See (#33)
 
 ## 0.68.6
