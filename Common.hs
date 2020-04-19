@@ -44,10 +44,10 @@ rawSystemL outDir outBase action flg prog args = withResponseFile outDir outBase
 #endif
     }
   exitStatus <- waitForProcess ph
+  errdata <- maybeReadHandle progerr
   case exitStatus of
     ExitFailure exitCode ->
-      do errdata <- maybeReadHandle progerr
-         die $ action ++ " failed "
+      do die $ action ++ " failed "
                       ++ "(exit code "    ++ show exitCode ++ ")\n"
                       ++ "rsp file was: " ++ show rspFile ++ "\n"
                       ++ "command was: "  ++ cmdLine ++ "\n"
@@ -72,11 +72,11 @@ rawSystemWithStdOutL outDir outBase action flg prog args outFile = withResponseF
 #endif
          }
   exitStatus <- waitForProcess process
+  errdata <- maybeReadHandle progerr
   hClose hOut
   case exitStatus of
     ExitFailure exitCode ->
-      do errdata <- maybeReadHandle progerr
-         die $ action ++ " failed "
+      do die $ action ++ " failed "
                       ++ "(exit code "    ++ show exitCode ++ ")\n"
                       ++ "rsp file was: " ++ show rspFile ++ "\n"
                       ++ "output file:"   ++ show outFile ++ "\n"
