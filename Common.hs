@@ -43,8 +43,8 @@ rawSystemL outDir outBase action flg prog args = withResponseFile outDir outBase
     , use_process_jobs = True
 #endif
     }
-  exitStatus <- waitForProcess ph
   errdata <- maybeReadHandle progerr
+  exitStatus <- waitForProcess ph
   case exitStatus of
     ExitFailure exitCode ->
       do die $ action ++ " failed "
@@ -71,8 +71,8 @@ rawSystemWithStdOutL outDir outBase action flg prog args outFile = withResponseF
          , use_process_jobs = True
 #endif
          }
-  exitStatus <- waitForProcess process
   errdata <- maybeReadHandle progerr
+  exitStatus <- waitForProcess process
   hClose hOut
   case exitStatus of
     ExitFailure exitCode ->
@@ -86,7 +86,14 @@ rawSystemWithStdOutL outDir outBase action flg prog args outFile = withResponseF
 
 maybeReadHandle :: Maybe Handle -> IO String
 maybeReadHandle Nothing  = return "<no data>"
-maybeReadHandle (Just h) = hGetContents h
+maybeReadHandle (Just h) = do
+    str <- hGetContents h
+    -- Because of the lazy IO, hGetContents doesn't actually drain handle.
+    Exception.evaluate (rnf str `seq` str)
+  where
+    rnf :: String -> ()
+    rnf []     = ()
+    rnf (c:cs) = c `seq` rnf cs
 
 -- delay the cleanup of generated files until the end; attempts to
 -- get around intermittent failure to delete files which has
