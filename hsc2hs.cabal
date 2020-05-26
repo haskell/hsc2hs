@@ -60,7 +60,7 @@ Executable hsc2hs
 
     Other-Extensions: CPP, NoMonomorphismRestriction
 
-    Build-Depends: base       >= 4.3.0 && < 4.15,
+    Build-Depends: base       >= 4.3.0 && < 4.16,
                    containers >= 0.4.0 && < 0.7,
                    directory  >= 1.1.0 && < 1.4,
                    filepath   >= 1.2.0 && < 1.5,
