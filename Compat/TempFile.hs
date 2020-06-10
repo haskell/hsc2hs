@@ -9,12 +9,15 @@
 -- See also https://gitlab.haskell.org/ghc/ghc/issues/10731
 --
 -- When hsc2hs supports GHC 8.10 as minimum then this module can be removed.
+-- When using WINIO we MUST use the version in base so force it to be used.
+-- WINIO is supported in GHC 8.12+ so the extra check is just for sanity.
 module Compat.TempFile (
     openBinaryTempFile,
     openTempFile
   ) where
 
-#if !MIN_VERSION_base(4,14,0) && defined(mingw32_HOST_OS)
+#if !MIN_VERSION_base(4,14,0) && defined(mingw32_HOST_OS) \
+    && !defined(__IO_MANAGER_WINIO__)
 #define NEEDS_TEMP_WORKAROUND 1
 #else
 #define NEEDS_TEMP_WORKAROUND 0
