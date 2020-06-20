@@ -68,41 +68,62 @@ outHeaderHs flags inH toks =
         "    hsc_printf (\"{-# OPTIONS_GHC %s #-}\\n\", \""++
                   showCString s++"\");\n"
 
+-- Explaination of (ShowS, (Bool, Bool, Int))
+-- When fold over this function we get a series of ShowS functions which print the output
+--
+-- In (Bool, Bool, Int)  Bool, Bool represent if column and line data should be printed
+-- for some reasons this "configuration" is carried over and modified from token to token
+-- Note that the Bool, Bool is also used in CrossCodegen.hs
+--
+-- The Int is used to keep track of line numbers when starttype and stoptype are encountered
 outTokenHs :: Bool                      -- ^ enable COLUMN pragmas?
-           -> (ShowS, (Bool, Bool))
+           -> (ShowS, (Bool, Bool, Int))
            -> Token
-           -> (ShowS, (Bool, Bool))
+           -> (ShowS, (Bool, Bool, Int))
 outTokenHs enableCol (out, state) (Text pos txt) =
     (out . showString str, state')
     where
     (str, state') = outTextHs state pos txt outText outHsLine
                               (if enableCol then outHsColumn else const "")
     outText s = "    hsc_fputs (\""++showCString s++"\", hsc_stdout());\n"
-outTokenHs _ (out, (rowSync, colSync)) (Special pos key arg) =
-    (out . showString str, (rowSync && null str, colSync && null str))
+outTokenHs _ (out, (rowSync, colSync, lastLine)) (Special pos@(SourcePos name line col) key arg) =
+    (out . showString str, (rowSync && null str, colSync && null str, lastLine'))
     where
+    -- All Special tokens generated intermediate C code, but not all C code generated from Special tokens generate .hs code
+    -- Since it's decided in this program (instead of the C file) wether to print the hsc_line macro we have to control this here
+    -- If the C macro's are changed and they start outputting hs code for the following keys, those keys should be removed below
+    hsLine = if key == "stoptype" then
+               outHsLine pos'
+             else if key `notElem` ["field", "starttype"] then
+               outHsLine pos
+             else ""
+    lastLine' = if key == "starttype" then
+                  line
+                else
+                  lastLine
+    pos' = if key == "stoptype" then
+             SourcePos name lastLine col
+           else
+             pos
     str = case key of
         "include"           -> ""
         "define"            -> ""
         "undef"             -> ""
         "def"               -> ""
-        _ | conditional key -> outCLine pos++"#"++key++" "++arg++"\n"
+        _ | conditional key -> outCLine pos++hsLine++"#"++key++" "++arg++"\n"
         "let"               -> ""
-        "enum"              -> outCLine pos++outEnum arg
-        _                   -> outCLine pos++"    hsc_"++key++" ("++arg++");\n"
+        "enum"              -> outCLine pos++hsLine++outEnum arg
+        _                   -> outCLine pos++hsLine++"    hsc_"++key++" ("++arg++");\n"
 
--- | Output a 'Text' 'Token' literally, making use of the three given output
--- functions.  The state contains @(lineSync, colSync)@, which indicate
--- whether the line number and column number in the input are synchronized
--- with those of the output.
-outTextHs :: (Bool, Bool)               -- ^ state @(lineSync, colSync)@
+-- | Output a 'Text' 'Token' literally.
+outTextHs :: (Bool, Bool, Int)          -- ^ state @(lineSync, colSync, lastLine)@
           -> SourcePos                  -- ^ original position of the token
           -> String                     -- ^ text of the token
           -> (String -> String)         -- ^ output text
           -> (SourcePos -> String)      -- ^ output LINE pragma
           -> (Int -> String)            -- ^ output COLUMN pragma
-          -> (String, (Bool, Bool))
-outTextHs (lineSync, colSync) pos@(SourcePos _ _ col) txt
+          -> (String, (Bool, Bool, Int))
+outTextHs (lineSync, colSync, lastLine) (SourcePos name line col) txt
           outText outLine outColumn =
     -- Ensure COLUMN pragmas are always inserted right before an identifier.
     -- They are never inserted in the middle of whitespace, as that could ruin
@@ -112,28 +133,28 @@ outTextHs (lineSync, colSync) pos@(SourcePos _ _ col) txt
             case break (== '\n') rest of
                 ("", _) ->
                     ( outText spaces
-                    , (lineSync, colSync) )
+                    , (lineSync, colSync, lastLine) )
                 (_, "") ->
                     ( (outText spaces++
                        updateCol++
                        outText rest)
-                    , (lineSync, True) )
+                    , (lineSync, True, lastLine) )
                 (firstRest, nl:restRest) ->
                     ( (outText spaces++
                        updateCol++
                        outText (firstRest++[nl])++
                        updateLine++
                        outText restRest)
-                    , (True, True) )
+                    , (True, True, lastLine) )
         (firstSpaces, nl:restSpaces) ->
             ( (outText (firstSpaces++[nl])++
                updateLine++
                outText (restSpaces++rest))
-            , (True, True) )
+            , (True, True, lastLine) )
     where
     (spaces, rest) = span isSpace txt
     updateLine | lineSync   = ""
-               | otherwise = outLine pos
+               | otherwise = outLine (SourcePos name (line + 1) col)
     updateCol | colSync   = ""
               | otherwise = outColumn (col + length spaces)
 
@@ -232,7 +253,7 @@ outCLine (SourcePos name line _) =
 
 outHsLine :: SourcePos -> String
 outHsLine (SourcePos name line _) =
-    "    hsc_line ("++show (line + 1)++", \""++
+    "    hsc_line ("++show line++", \""++
     (showCString . showCString) name ++ "\");\n"
 
 outHsColumn :: Int -> String
