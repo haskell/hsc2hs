@@ -88,7 +88,11 @@ maybeReadHandle :: Maybe Handle -> IO String
 maybeReadHandle Nothing  = return "<no data>"
 maybeReadHandle (Just h) = do
     str <- hGetContents h
+    -- Pipes have a buffer, once buffer gets full writes to the pipe block
+    -- until the data currently in the buffer is read.  To ensure we don't
+    -- block indefinitely we need to actually read from the pipe we requested.
     -- Because of the lazy IO, hGetContents doesn't actually drain handle.
+    -- See https://github.com/haskell/hsc2hs/issues/47
     Exception.evaluate (rnf str `seq` str)
   where
     rnf :: String -> ()
