@@ -1,11 +1,11 @@
 module Main where
 
-import Test.Tasty.Hspec
+import BDD
 import ATTParser
 import Control.Monad (forM_)
 
 main :: IO ()
-main = hspec $ do
+main = specMain $ do
   describe "asm parser" $ do
     -- 64bit
     forM_ [("x86_64 linux", "test/asm/x86_64-linux.s")
@@ -27,7 +27,7 @@ main = hspec $ do
           ,("sh4 linux",    "test/asm/sh4-linux.s")
           ]
       $ \(d, f) ->do
-      context d $ do
+      describe d $ do
         x <- runIO $ parse f
 
         it "x should be 1" $ do
@@ -48,7 +48,7 @@ main = hspec $ do
           ,("powerpc linux","test/asm/powerpc-linux.s")
           ]
       $ \(d, f) ->do
-      context d $ do
+      describe d $ do
         x <- runIO $ parse f
 
         it "x should be 1" $ do

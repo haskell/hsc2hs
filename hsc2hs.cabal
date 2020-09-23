@@ -80,10 +80,12 @@ Executable hsc2hs
 test-suite spec
   main-is:           Spec.hs
   hs-source-dirs:    src/ test/
-  other-modules:     ATTParser
+  other-modules:     ATTParser BDD
   ghc-options:       -Wall -threaded
   type:              exitcode-stdio-1.0
-  build-depends:       base
-                     , tasty
-                     , tasty-hspec
+  build-depends:     base,
+                     test-framework >=0.8.2.0 && <0.9,
+                     test-framework-hunit >=0.3.0.2 && <0.4,
+                     HUnit >=1.3.1.2 && <1.4 || >=1.6.0.0 && <1.7
+
   default-language: Haskell2010
