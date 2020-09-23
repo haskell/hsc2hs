@@ -1,3 +1,10 @@
+## 0.68.8
+
+ - Process flags in order, now the last of `--compiler`, `--linker`,
+    `--template` is used. (#35)
+
+ - WINIO: Make sure that with we don't use the TEMP workaround (#52)
+
 ## 0.68.7
 
  - The C compiler is now assumed to be called `cc` instead of `gcc`
