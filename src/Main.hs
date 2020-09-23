@@ -77,7 +77,7 @@ main = do
         usage = usageInfo header options
     args <- getArgsWithResponseFiles
     let (fs, files, errs) = getOpt Permute options args
-    let mode = foldl (.) id fs emptyMode
+    let mode = foldl (\m f -> f m) emptyMode fs
     case mode of
         Help     -> bye usage
         Version  -> bye versionString
