@@ -3,10 +3,13 @@ module Flags where
 
 import System.Console.GetOpt
 
+import Debug.Trace
+
 data Mode
     = Help
     | Version
     | UseConfig (ConfigM Maybe)
+
 
 newtype Id a = Id { fromId :: a }
 type Config = ConfigM Id
@@ -97,7 +100,7 @@ options = [
         "output version information and exit" ]
 
 addFlag :: Flag -> Mode -> Mode
-addFlag f (UseConfig c) = UseConfig $ c { cFlags = f : cFlags c }
+addFlag f (UseConfig c) = UseConfig $ c { cFlags = cFlags c ++ [f]}
 addFlag _ mode = mode
 
 setMode :: Mode -> Mode -> Mode

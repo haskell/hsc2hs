@@ -72,11 +72,11 @@ main = specMain $ do
               , "--include=<include1.h>", "--include=<include2.h>"
               , "--template", "template1", "--template=template2"
               ]
-      let mode = foldl (.) id fs emptyMode
+      let mode = foldl (\m f -> f m) emptyMode fs
 
-      configModeMaybe mode cmCompiler `shouldBe` Just "gcc"       -- this is wrong
-      configModeMaybe mode cmTemplate `shouldBe` Just "template1" -- this is wrong too
-      configMode      mode cFlags     `shouldBe` Just [Include "<include1.h>", Include "<include2.h>"] -- this is right
+      configModeMaybe mode cmCompiler `shouldBe` Just "clang"
+      configModeMaybe mode cmTemplate `shouldBe` Just "template2"
+      configMode      mode cFlags     `shouldBe` Just [Include "<include1.h>", Include "<include2.h>"]
 
       files `shouldBe` []
       errs `shouldBe` []
