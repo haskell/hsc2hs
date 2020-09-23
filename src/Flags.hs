@@ -55,7 +55,7 @@ data Flag
     | Include   String
     | Define    String (Maybe String)
     | Output    String
-    deriving Show
+    deriving (Eq, Show)
 
 options :: [OptDescr (Mode -> Mode)]
 options = [
