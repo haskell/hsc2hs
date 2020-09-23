@@ -80,7 +80,7 @@ Executable hsc2hs
 test-suite spec
   main-is:           Spec.hs
   hs-source-dirs:    src/ test/
-  other-modules:     ATTParser BDD
+  other-modules:     ATTParser Flags BDD
   ghc-options:       -Wall -threaded
   type:              exitcode-stdio-1.0
   build-depends:     base,

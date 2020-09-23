@@ -2,7 +2,10 @@ module Main where
 
 import BDD
 import ATTParser
+import Flags
+
 import Control.Monad (forM_)
+import System.Console.GetOpt
 
 main :: IO ()
 main = specMain $ do
@@ -61,4 +64,27 @@ main = specMain $ do
         it "t should be \"Hello World\\\"\\n\\0\"" $ do
           lookupString "t" x `shouldBe` (Just "Hello World\" 12345\0")
 
+  describe "flags" $ do
+    it "are processed in order" $ do
+      -- at the moment this test fails (issue #35)
+      let (fs, files, errs) = getOpt Permute options
+              [ "--cc=gcc", "--cc=clang"
+              , "--include=<include1.h>", "--include=<include2.h>"
+              , "--template", "template1", "--template=template2"
+              ]
+      let mode = foldl (.) id fs emptyMode
 
+      configModeMaybe mode cmCompiler `shouldBe` Just "gcc"       -- this is wrong
+      configModeMaybe mode cmTemplate `shouldBe` Just "template1" -- this is wrong too
+      configMode      mode cFlags     `shouldBe` Just [Include "<include1.h>", Include "<include2.h>"] -- this is right
+
+      files `shouldBe` []
+      errs `shouldBe` []
+
+configMode :: Mode -> (ConfigM Maybe -> a) -> Maybe a
+configMode (UseConfig c) f = Just (f c)
+configMode _             _ = Nothing
+
+configModeMaybe :: Mode -> (ConfigM Maybe -> Maybe a) -> Maybe a
+configModeMaybe (UseConfig c) f = f c
+configModeMaybe _             _ = Nothing
