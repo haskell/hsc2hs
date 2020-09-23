@@ -22,6 +22,7 @@ Description:
     <http://downloads.haskell.org/~ghc/master/users-guide/utils.html#writing-haskell-interfaces-to-c-code-hsc2hs hsc2hs section>
     in the GHC User's Guide.
 Category: Development
+Data-Dir: data/
 Data-Files: template-hsc.h
 build-type: Simple
 tested-with: GHC==8.10.1, GHC==8.8.3, GHC==8.6.5, GHC==8.4.4, GHC==8.2.2, GHC==8.0.2, GHC==7.10.3, GHC==7.8.4, GHC==7.6.3, GHC==7.4.2, GHC==7.2.2, GHC==7.0.4
@@ -42,6 +43,7 @@ source-repository head
 Executable hsc2hs
     Default-Language: Haskell2010
     Main-Is: Main.hs
+    Hs-Source-Dirs: src/
     Other-Modules:
         C
         Common
@@ -77,7 +79,7 @@ Executable hsc2hs
 
 test-suite spec
   main-is:           Spec.hs
-  hs-source-dirs:    .
+  hs-source-dirs:    src/ test/
   other-modules:     ATTParser
   ghc-options:       -Wall -threaded
   type:              exitcode-stdio-1.0
