@@ -43,11 +43,11 @@ rawSystemL outDir outBase action flg prog args = withResponseFile outDir outBase
     , use_process_jobs = True
 #endif
     }
+  errdata <- maybeReadHandle progerr
   exitStatus <- waitForProcess ph
   case exitStatus of
     ExitFailure exitCode ->
-      do errdata <- maybeReadHandle progerr
-         die $ action ++ " failed "
+      do die $ action ++ " failed "
                       ++ "(exit code "    ++ show exitCode ++ ")\n"
                       ++ "rsp file was: " ++ show rspFile ++ "\n"
                       ++ "command was: "  ++ cmdLine ++ "\n"
@@ -71,12 +71,12 @@ rawSystemWithStdOutL outDir outBase action flg prog args outFile = withResponseF
          , use_process_jobs = True
 #endif
          }
+  errdata <- maybeReadHandle progerr
   exitStatus <- waitForProcess process
   hClose hOut
   case exitStatus of
     ExitFailure exitCode ->
-      do errdata <- maybeReadHandle progerr
-         die $ action ++ " failed "
+      do die $ action ++ " failed "
                       ++ "(exit code "    ++ show exitCode ++ ")\n"
                       ++ "rsp file was: " ++ show rspFile ++ "\n"
                       ++ "output file:"   ++ show outFile ++ "\n"
@@ -86,7 +86,18 @@ rawSystemWithStdOutL outDir outBase action flg prog args outFile = withResponseF
 
 maybeReadHandle :: Maybe Handle -> IO String
 maybeReadHandle Nothing  = return "<no data>"
-maybeReadHandle (Just h) = hGetContents h
+maybeReadHandle (Just h) = do
+    str <- hGetContents h
+    -- Pipes have a buffer, once buffer gets full writes to the pipe block
+    -- until the data currently in the buffer is read.  To ensure we don't
+    -- block indefinitely we need to actually read from the pipe we requested.
+    -- Because of the lazy IO, hGetContents doesn't actually drain handle.
+    -- See https://github.com/haskell/hsc2hs/issues/47
+    Exception.evaluate (rnf str `seq` str)
+  where
+    rnf :: String -> ()
+    rnf []     = ()
+    rnf (c:cs) = c `seq` rnf cs
 
 -- delay the cleanup of generated files until the end; attempts to
 -- get around intermittent failure to delete files which has
