@@ -44,7 +44,7 @@ $(hsc2hs_INPLACE) : | $(utils/hsc2hs_template)
 # dependency to ensure these libs are built before we invoke hsc2hs:
 $(hsc2hs_INPLACE) : $(OTHER_LIBS)
 
-$(utils/hsc2hs_template) : utils/hsc2hs/template-hsc.h | $$(dir $$@)/.
+$(utils/hsc2hs_template) : utils/hsc2hs/data/template-hsc.h | $$(dir $$@)/.
 	"$(CP)" $< $@
 
 endif
@@ -52,8 +52,8 @@ endif
 install: install_utils/hsc2hs_dist_install
 
 .PHONY: install_utils/hsc2hs_dist_install
-install_utils/hsc2hs_dist_install: utils/hsc2hs/template-hsc.h
+install_utils/hsc2hs_dist_install: utils/hsc2hs/data/template-hsc.h
 	$(INSTALL_HEADER) $(INSTALL_OPTS) $< "$(DESTDIR)$(topdir)"
 
-BINDIST_EXTRAS += utils/hsc2hs/template-hsc.h
+BINDIST_EXTRAS += utils/hsc2hs/data/template-hsc.h
 
