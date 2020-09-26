@@ -3,8 +3,6 @@ module Flags where
 
 import System.Console.GetOpt
 
-import Debug.Trace
-
 data Mode
     = Help
     | Version
