@@ -42,7 +42,7 @@ import HSCParser
 
 import qualified ATTParser as ATT
 
--- A monad over IO for performing tests; keeps the commandline flags
+-- A monad over IO for performing tests; keeps the command line flags
 -- and a state counter for unique filename generation.
 -- equivalent to ErrorT String (StateT Int (ReaderT TestMonadEnv IO))
 newtype TestMonad a = TestMonad { runTest :: TestMonadEnv -> Int -> IO (Either String a, Int) }
@@ -259,7 +259,7 @@ outputText state output pos txt = do
 --
 -- So before we compile any of the tests, take a pass over the whole file and
 -- generate a .c file which should fail if there are any syntax errors in what
--- the user gaves us. Hopefully, then the only reason our later compilations
+-- the user gave us. Hopefully, then the only reason our later compilations
 -- might fail is the particular reason we want.
 --
 -- Another approach would be to try to parse the stdout of GCC and diagnose
