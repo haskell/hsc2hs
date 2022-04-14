@@ -483,7 +483,7 @@ computeType z@(ZCursor (Special pos _ value) _ _) = do
     testLogAtPos pos ("computing type of " ++ value) $ do
         integral <- testLog ("checking if type " ++ value ++ " is an integer") $ do
             success <- runCompileBooleanTest z $ "(" ++ value ++ ")(int)(" ++ value ++ ")1.4 == (" ++ value ++ ")1.4"
-            testLog' $ "result: " ++ (if success then "integer" else "floating")
+            testLog' $ "result: " ++ (if success then "integer" else "pointer or floating")
             return success
         typeRet <- if integral
          then do
@@ -494,18 +494,25 @@ computeType z@(ZCursor (Special pos _ value) _ _) = do
             size <- computeConst z ("sizeof(" ++ value ++ ")")
             return $ (if signed then "Int" else "Word") ++ (show (size * 8))
          else do
-            let checkSize test = testLog ("checking if " ++ test) $ do
-                    success <- runCompileBooleanTest z test
-                    testLog' $ "result: " ++ show success
-                    return success
-            ldouble <- checkSize ("sizeof(" ++ value ++ ") > sizeof(double)")
-            if ldouble
-             then return "LDouble"
-             else do
-                double <- checkSize ("sizeof(" ++ value ++ ") == sizeof(double)")
-                if double
-                 then return "Double"
-                 else return "Float"
+            pointer <- testLog ("checking if type " ++ value ++ " is a pointer") $ do
+                success <- runCompileIsPointerTest z value
+                testLog' $ "result: " ++ (if success then "pointer" else "floating")
+                return success
+            if pointer
+                then return "CUIntPtr"
+                else do
+                    let checkSize test = testLog ("checking if " ++ test) $ do
+                            success <- runCompileBooleanTest z test
+                            testLog' $ "result: " ++ show success
+                            return success
+                    ldouble <- checkSize ("sizeof(" ++ value ++ ") > sizeof(double)")
+                    if ldouble
+                    then return "LDouble"
+                    else do
+                        double <- checkSize ("sizeof(" ++ value ++ ") == sizeof(double)")
+                        if double
+                        then return "Double"
+                        else return "Float"
         testLog' $ "result: " ++ typeRet
         return typeRet
 computeType _ = error "computeType argument isn't a Special"
@@ -568,6 +575,22 @@ runCompileBooleanTest (ZCursor s above below) booleanTest = do
                "int _hsc2hs_test() {\n" ++
                "  static int test_array[1 - 2 * !(" ++ booleanTest ++ ")];\n" ++
                "  return test_array[0];\n" ++
+               "}\n" ++
+               (concatMap outHeaderCProg' below)
+    runCompileTest test
+
+runCompileIsPointerTest :: ZCursor Token -> String -> TestMonad Bool
+runCompileIsPointerTest (ZCursor s above below) ty = do
+    config <- testGetConfig
+    flags <- testGetFlags
+    let test = -- all the surrounding code
+               outTemplateHeaderCProg (cTemplate config) ++
+               (concatMap outFlagHeaderCProg flags) ++
+               (concatMap outHeaderCProg' above) ++
+               outHeaderCProg' s ++
+               -- the test
+               "void _hsc2hs_test(" ++ ty ++ " val) {\n" ++
+               "  memset(val, 0, 0);\n" ++
                "}\n" ++
                (concatMap outHeaderCProg' below)
     runCompileTest test
