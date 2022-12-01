@@ -99,7 +99,11 @@ preprocess ('\t':attr) = let (h, t) = break isSpace attr
                          -- ia64
                          ("stringz":x:_)            -> [mkAscii $ read x ++ "\0"]
                          _                          -> []
-  where w = head . words
+  where
+    w x = case words x of
+      []     -> error $ "preprocess: expected some non-space characters, "
+                     ++ "but got spaces only in '" ++ x ++ "'"
+      hd : _ -> hd
 preprocess ('.':'z':'e':'r':'o':'f':'i':'l':'l':' ':x) = case words' (==',') x of
       (_seg:_sect:sym:size:_) | size == "4" -> [Ident sym, mkLong 0]
                               | size == "8" -> [Ident sym, mkQuad 0]
