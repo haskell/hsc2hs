@@ -1,6 +1,6 @@
 cabal-version: >=1.10
 Name: hsc2hs
-Version: 0.68.8
+Version: 0.68.9
 
 Copyright: 2000, Marcin Kowalczyk
 License: BSD3

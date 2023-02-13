@@ -1,3 +1,7 @@
+## 0.68.9
+
+ - Improve robustness of detection of pointer types in `--cross` mode.
+
 ## 0.68.8
 
  - Process flags in order, now the last of `--compiler`, `--linker`,
