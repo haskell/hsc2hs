@@ -589,8 +589,8 @@ runCompileIsPointerTest (ZCursor s above below) ty = do
                (concatMap outHeaderCProg' above) ++
                outHeaderCProg' s ++
                -- the test
-               "void _hsc2hs_test(" ++ ty ++ " val) {\n" ++
-               "  memset(val, 0, 0);\n" ++
+               "void *_hsc2hs_test(" ++ ty ++ " val) {\n" ++
+               "  return val;\n" ++
                "}\n" ++
                (concatMap outHeaderCProg' below)
     runCompileTest test
