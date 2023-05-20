@@ -6,8 +6,13 @@ The standard mode for hsc2hs: generates a C file which is
 compiled and run; the output of that program is the .hs file.
 -}
 
+#if MIN_VERSION_base(4,6,0)
+import Prelude hiding ( Foldable(..) )
+#else
+import Data.List ( foldl' )
+#endif
 import Data.Char                ( isAlphaNum, toUpper )
-import Data.Foldable            ( foldl' )
+import Data.Foldable            ( Foldable(..) )
 import Control.Monad            ( when, forM_ )
 
 import System.Exit              ( ExitCode(..), exitWith )
