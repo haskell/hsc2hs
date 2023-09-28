@@ -251,7 +251,7 @@ The following are unsupported:
 
 .. |Hackage| image:: https://img.shields.io/hackage/v/hsc2hs.svg
     :target: http://hackage.haskell.org/package/hsc2hs
-.. |Linux build| image:: https://img.shields.io/travis/haskell/hsc2hs.svg
-    :target: https://travis-ci.org/haskell/hsc2hs
+.. |Linux build| image:: https://github.com/haskell/hsc2hs/actions/workflows/haskell-ci.yml/badge.svg
+    :target: https://github.com/haskell/hsc2hs/actions/workflows/haskell-ci.yml
 .. |Windows build| image:: https://ci.appveyor.com/api/projects/status/ee434vcpvit2qeqh?svg=true
     :target: https://ci.appveyor.com/project/RyanGlScott/hsc2hs
