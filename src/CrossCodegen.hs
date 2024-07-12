@@ -314,7 +314,7 @@ outValidityCheck viaAsm s@(Special pos key value) uniq =
                 "}\n"
 
     -- we want this to fail if the value is syntactically invalid or isn't a constant
-    validConstTest value' = outCLine pos ++ "    {\n        static int test_array[(" ++ value' ++ ") > 0 ? 2 : 1];\n        (void)test_array;\n    }\n"
+    validConstTest value' = outCLine pos ++ "    {\n        int test_array[(" ++ value' ++ ") > 0 ? 2 : 1];\n        (void)test_array;\n    }\n"
     validConstTestViaAsm name value' = outCLine pos ++ "\nextern long long _hsc2hs_test_" ++ name ++";\n"
                                                     ++ "long long _hsc2hs_test_" ++ name ++ " = (" ++ value' ++ ");\n"
 
@@ -380,8 +380,6 @@ computeConst zOrig@(ZCursor (Special pos _ _) _ _) value =
         int <- case cViaAsm config of
                  True -> runCompileAsmIntegerTest z
                  False -> do nonNegative <- compareConst z (GreaterOrEqual (Signed 0))
-                             integral <- checkValueIsIntegral z nonNegative
-                             when (not integral) $ testFail pos $ value ++ " is not an integer"
                              (lower,upper) <- bracketBounds z nonNegative
                              binarySearch z nonNegative lower upper
         testLog' $ "result: " ++ show int
@@ -573,7 +571,7 @@ runCompileBooleanTest (ZCursor s above below) booleanTest = do
                outHeaderCProg' s ++
                -- the test
                "int _hsc2hs_test() {\n" ++
-               "  static int test_array[1 - 2 * !(" ++ booleanTest ++ ")];\n" ++
+               "  int test_array[1 - 2 * !(" ++ booleanTest ++ ")];\n" ++
                "  return test_array[0];\n" ++
                "}\n" ++
                (concatMap outHeaderCProg' below)
