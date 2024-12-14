@@ -275,7 +275,7 @@ checkValidity input = do
                concatMap (uncurry (outValidityCheck (cViaAsm config))) (zip input [0..])
     testLog ("checking for compilation errors") $ do
         success <- makeTest2 (".c",".o") $ \(cFile,oFile) -> do
-            liftTestIO $ writeBinaryFile cFile test
+            liftTestIO $ writeUtf8File cFile test
             compiler <- testGetCompiler
             runCompiler compiler
                         (["-S" | cViaAsm config ]++
@@ -619,7 +619,7 @@ runCompileAsmIntegerTest _ = error "runCompileAsmIntegerTestargument isn't a Spe
 runCompileExtract :: String -> String -> TestMonad Integer
 runCompileExtract k testStr = do
     makeTest3 (".c", ".s", ".txt") $ \(cFile, sFile, stdout) -> do
-      liftTestIO $ writeBinaryFile cFile testStr
+      liftTestIO $ writeUtf8File cFile testStr
       flags <- testGetFlags
       compiler <- testGetCompiler
       _ <- runCompiler compiler
@@ -631,7 +631,7 @@ runCompileExtract k testStr = do
 runCompileTest :: String -> TestMonad Bool
 runCompileTest testStr = do
     makeTest3 (".c", ".o",".txt") $ \(cFile,oFile,stdout) -> do
-      liftTestIO $ writeBinaryFile cFile testStr
+      liftTestIO $ writeUtf8File cFile testStr
       flags <- testGetFlags
       compiler <- testGetCompiler
       runCompiler compiler

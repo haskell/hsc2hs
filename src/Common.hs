@@ -30,8 +30,10 @@ default_compiler = "cc"
 ------------------------------------------------------------------------
 -- Write the output files.
 
-writeBinaryFile :: FilePath -> String -> IO ()
-writeBinaryFile fp str = withBinaryFile fp WriteMode $ \h -> hPutStr h str
+writeUtf8File :: FilePath -> String -> IO ()
+writeUtf8File fp str = withBinaryFile fp WriteMode $ \h -> do
+  hSetEncoding h utf8
+  hPutStr h str
 
 rawSystemL :: FilePath -> FilePath -> String -> Bool -> FilePath -> [String] -> IO ()
 rawSystemL outDir outBase action flg prog args = withResponseFile outDir outBase args $ \rspFile -> do
