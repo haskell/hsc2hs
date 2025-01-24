@@ -7,12 +7,11 @@ environment:
   global:
     CABOPTS:  "--store-dir=C:\\SR --http-transport=plain-http"
   matrix:
-    - GHCVER: "8.8.1"
-    - GHCVER: "8.6.5"
-    - GHCVER: "8.4.4"
-    - GHCVER: "8.2.2"
-    - GHCVER: "8.0.2.2"
-    - GHCVER: "7.10.3.2"
+    - GHCVER: "9.10.2"
+    - GHCVER: "9.8.4"
+    - GHCVER: "9.6.3"
+    - GHCVER: "9.4.5"
+    - GHCVER: "9.2.3"
 
 matrix:
   # set this flag to immediately finish build once one of the jobs fails.
