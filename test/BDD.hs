@@ -4,9 +4,8 @@
 module BDD where
 
 import Control.Monad (ap)
-import Test.Framework (defaultMain, TestName, Test, testGroup)
-import Test.Framework.Providers.HUnit (testCase)
-import Test.HUnit (Assertion, (@?=))
+import Test.Tasty
+import Test.Tasty.HUnit
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative (Applicative (..))
@@ -24,13 +23,13 @@ import GHC.Stack (HasCallStack)
 -------------------------------------------------------------------------------
 
 specMain :: TestM () -> IO ()
-specMain t = runTestM t >>= defaultMain
+specMain t = runTestM t >>= defaultMain . testGroup "specs"
 
-newtype TestM a = TestM { unTestM :: [Test] -> IO ([Test], a) }
+newtype TestM a = TestM { unTestM :: [TestTree] -> IO ([TestTree], a) }
   deriving (Functor)
 
 -- accumulating in reverse order.
-tell1 :: Test -> TestM ()
+tell1 :: TestTree -> TestM ()
 tell1 t = TestM $ \ts -> return (t : ts, ())
 
 instance Applicative TestM where
@@ -44,7 +43,7 @@ instance Monad TestM where
         (ys, x) <- unTestM m xs
         unTestM (k x) ys
 
-runTestM :: TestM () -> IO [Test]
+runTestM :: TestM () -> IO [TestTree]
 runTestM (TestM m) = fmap (reverse . fst) (m [])
 
 runIO :: IO a -> TestM a
