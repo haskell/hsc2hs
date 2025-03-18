@@ -66,7 +66,7 @@ outputDirect config outName outDir outBase name toks = do
                                     "if","ifdef","ifndef", "elif","else","endif"]) $
              die (file ++ ":" ++ show line ++ " directive \"" ++ key ++ "\" is not safe for cross-compilation"))
 
-    writeBinaryFile cProgName $
+    writeUtf8File cProgName $
         outTemplateHeaderCProg (cTemplate config)++
         concatMap outFlagHeaderCProg flags++
         concatMap outHeaderCProg specials++
@@ -99,7 +99,7 @@ outputDirect config outName outDir outBase name toks = do
         rawSystemWithStdOutL outDir outBase ("running " ++ execProgName) beVerbose execProgName [] outName
         possiblyRemove progName $ do
 
-          when needsH $ writeBinaryFile outHName $
+          when needsH $ writeUtf8File outHName $
             "#ifndef "++includeGuard++"\n" ++
             "#define "++includeGuard++"\n" ++
             "#include <HsFFI.h>\n" ++
@@ -111,7 +111,7 @@ outputDirect config outName outDir outBase name toks = do
             concatMap outTokenH specials++
             "#endif\n"
 
-          when needsC $ writeBinaryFile outCName $
+          when needsC $ writeUtf8File outCName $
             "#include \""++outHFile++"\"\n"++
             concatMap outTokenC specials
             -- NB. outHFile not outHName; works better when processed
