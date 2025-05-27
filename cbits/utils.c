@@ -46,11 +46,21 @@ bool __get_temp_file_name (wchar_t* pathName, wchar_t* prefix,
         {
           wchar_t* temp = _wcsdup (tempFileName);
           if (wcsnlen(drive, _MAX_DRIVE) == 0)
-            swprintf_s(tempFileName, MAX_PATH, L"%s\%s%s",
+#ifdef __clang__
+            swprintf(tempFileName, MAX_PATH, L"%s\\%s%s",
                       dir, fname, suffix);
+#else
+            swprintf_s(tempFileName, MAX_PATH, L"%s\\%s%s",
+                      dir, fname, suffix);
+#endif
           else
-            swprintf_s(tempFileName, MAX_PATH, L"%s\%s\%s%s",
+#ifdef __clang__
+            swprintf(tempFileName, MAX_PATH, L"%s\\%s\\%s%s",
                       drive, dir, fname, suffix);
+#else
+            swprintf_s(tempFileName, MAX_PATH, L"%s\\%s\\%s%s",
+                      drive, dir, fname, suffix);
+#endif
           success
              = MoveFileExW(temp, tempFileName, MOVEFILE_WRITE_THROUGH
                                                | MOVEFILE_COPY_ALLOWED) != 0;
