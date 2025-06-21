@@ -27,7 +27,7 @@ withUtilsObject config outDir outBase f = do
         oUtilsName = outDir ++ outBase ++ "_hsc_utils.o"
 
     possiblyRemove cUtilsName $ do
-        writeBinaryFile cUtilsName $ unlines $
+        writeUtf8File cUtilsName $ unlines $
              -- These header will cause a mismatch with any mingw-w64 header by
              -- including system headers before user headers in the hsc file.
              -- We *MUST* include user headers *BEFORE* automatic ones.  */
