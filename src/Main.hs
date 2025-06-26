@@ -62,6 +62,13 @@ import HSCParser
 # endif
 #endif
 
+#if MIN_VERSION_base(4,19,0)
+import Data.List (unsnoc)
+#else
+unsnoc :: [a] -> Maybe ([a], a)
+unsnoc = foldr (\x -> Just . maybe ([], x) (\(~(a, b)) -> (x : a, b))) Nothing
+#endif
+
 #ifdef BUILD_NHC
 getDataFileName s = do here <- getCurrentDirectory
                        return (here++"/"++s)
@@ -122,10 +129,9 @@ processFiles configM files usage = do
 
     forM_ files (\name -> do
         (outName, outDir, outBase) <- case [f | Output f <- cFlags config] of
-             [] -> if not (null ext) && last ext == 'c'
-                      then return (dir++base++init ext,  dir, base)
-                      else
-                         if ext == ".hs"
+             [] -> case unsnoc ext of
+                   Just (initExt, 'c') -> return (dir++base++initExt,  dir, base)
+                   _ -> if ext == ".hs"
                             then return (dir++base++"_out.hs", dir, base)
                             else return (dir++base++".hs",     dir, base)
                    where
