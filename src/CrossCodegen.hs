@@ -307,7 +307,7 @@ outValidityCheck viaAsm s@(Special pos key value) uniq =
         case parseEnum value of
             Nothing -> ""
             Just (_,_,enums) | viaAsm ->
-                concatMap (\(hName,cName) -> validConstTestViaAsm (fromMaybe "noKey" (ATT.trim `fmap` hName) ++ show uniq) cName) enums
+                concatMap (\(hName,cName) -> validConstTestViaAsm (fromMaybe (ATT.trim cName) (ATT.trim `fmap` hName) ++ show uniq) cName) enums
             Just (_,_,enums) ->
                 "void _hsc2hs_test" ++ show uniq ++ "()\n{\n" ++
                 concatMap (\(_,cName) -> validConstTest cName) enums ++
