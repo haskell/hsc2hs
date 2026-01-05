@@ -1,3 +1,8 @@
+## Unreleased
+
+ - Remove support for GHC 8.0 and below.
+
+
 ## 0.68.10
 
  - Further improve robustness of detection of pointer types in `--cross` mode.

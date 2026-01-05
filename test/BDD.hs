@@ -7,17 +7,6 @@ import Control.Monad (ap)
 import Test.Tasty
 import Test.Tasty.HUnit
 
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative (Applicative (..))
-#endif
-
-#if MIN_VERSION_base(4,9,0)
-import GHC.Stack (HasCallStack)
-#define HASCALLSTACK , HasCallStack
-#else
-#define HASCALLSTACK
-#endif
-
 -------------------------------------------------------------------------------
 -- HSpec like DSL for test-framework
 -------------------------------------------------------------------------------
@@ -33,12 +22,10 @@ tell1 :: TestTree -> TestM ()
 tell1 t = TestM $ \ts -> return (t : ts, ())
 
 instance Applicative TestM where
-    pure = return
+    pure x = TestM $ \xs -> return (xs, x)
     (<*>) = ap
 
 instance Monad TestM where
-    return x = TestM $ \xs -> return (xs, x)
-
     m >>= k = TestM $ \xs -> do
         (ys, x) <- unTestM m xs
         unTestM (k x) ys
@@ -63,5 +50,5 @@ describe n t =  do
 it :: TestName -> Assertion -> TestM ()
 it n assertion = tell1 $ testCase n assertion
 
-shouldBe :: (Eq a, Show a HASCALLSTACK) => a -> a -> Assertion
+shouldBe :: (Eq a, Show a, HasCallStack) => a -> a -> Assertion
 shouldBe = (@?=)
