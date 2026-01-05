@@ -1,4 +1,4 @@
-cabal-version: >=1.10
+cabal-version: 2.0
 Name: hsc2hs
 Version: 0.68.10
 
@@ -41,8 +41,10 @@ tested-with:
   GHC == 8.4.4
   GHC == 8.2.2
 
-extra-source-files:
+extra-doc-files:
   changelog.md
+
+extra-source-files:
   test/asm/*.s
 
 flag in-ghc-tree
@@ -70,17 +72,19 @@ Executable hsc2hs
         Compat.ResponseFile
         Compat.TempFile
         Paths_hsc2hs
+    autogen-modules:
+        Paths_hsc2hs
 
     c-sources:
         cbits/utils.c
 
     Other-Extensions: CPP, NoMonomorphismRestriction
 
-    Build-Depends: base       >= 4.3.0 && < 4.23,
+    Build-Depends: base       >= 4.10  && < 4.23,
                    containers >= 0.4.0 && < 0.9,
                    directory  >= 1.1.0 && < 1.4,
                    filepath   >= 1.2.0 && < 1.6,
-                   process    >= 1.1.0 && < 1.7
+                   process    >= 1.6   && < 1.7
 
     if os(windows)
       -- N.B. Job object support was irreparably broken prior to 1.6.8.
@@ -94,10 +98,13 @@ Executable hsc2hs
 test-suite spec
   main-is:           Spec.hs
   hs-source-dirs:    src/ test/
-  other-modules:     ATTParser Flags BDD
+  other-modules:
+    ATTParser
+    BDD
+    Flags
   ghc-options:       -Wall -threaded
   type:              exitcode-stdio-1.0
-  build-depends:     base                 >= 4.3.0   && < 4.23,
+  build-depends:     base                 >= 4.10    && < 4.23,
                      tasty                >= 1.5     && < 1.6,
                      tasty-hunit          >= 0.10    && < 0.11
 

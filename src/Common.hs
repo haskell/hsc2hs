@@ -1,11 +1,7 @@
 {-# LANGUAGE CPP #-}
 module Common where
 
-#if MIN_VERSION_base(4,6,0)
 import Prelude hiding ( Foldable(..) )
-#else
-import Data.List ( foldl' )
-#endif
 import qualified Control.Exception as Exception
 import qualified Compat.TempFile as Compat
 import Control.Monad            ( when )
@@ -44,9 +40,7 @@ rawSystemL outDir outBase action flg prog args = withResponseFile outDir outBase
   -- between the last child dieing and not holding a lock on the response file
   -- and the response file getting deleted.
     { std_err = CreatePipe
-#if MIN_VERSION_process(1,5,0)
     , use_process_jobs = True
-#endif
     }
   errdata <- maybeReadHandle progerr
   exitStatus <- waitForProcess ph
@@ -72,9 +66,7 @@ rawSystemWithStdOutL outDir outBase action flg prog args outFile = withResponseF
     createProcess
       (proc prog  ['@':rspFile])
          { std_out = UseHandle hOut, std_err = CreatePipe
-#if MIN_VERSION_process(1,5,0)
          , use_process_jobs = True
-#endif
          }
   errdata <- maybeReadHandle progerr
   exitStatus <- waitForProcess process

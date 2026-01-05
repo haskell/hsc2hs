@@ -1,7 +1,5 @@
 {-# LANGUAGE CPP #-}
-#if __GLASGOW_HASKELL__ >= 704
 {-# LANGUAGE Safe #-}
-#endif
 
 -- This module backports `openTempFile` from GHC 8.10 to hsc2hs in order to get
 -- an atomic `openTempFile` implementation on Windows when using older GHC
