@@ -7,8 +7,6 @@ import Control.Monad (ap)
 import Test.Tasty
 import Test.Tasty.HUnit
 
-import GHC.Stack (HasCallStack)
-
 -------------------------------------------------------------------------------
 -- HSpec like DSL for test-framework
 -------------------------------------------------------------------------------
@@ -24,12 +22,10 @@ tell1 :: TestTree -> TestM ()
 tell1 t = TestM $ \ts -> return (t : ts, ())
 
 instance Applicative TestM where
-    pure = return
+    pure x = TestM $ \xs -> return (xs, x)
     (<*>) = ap
 
 instance Monad TestM where
-    return x = TestM $ \xs -> return (xs, x)
-
     m >>= k = TestM $ \xs -> do
         (ys, x) <- unTestM m xs
         unTestM (k x) ys
