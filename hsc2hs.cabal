@@ -1,7 +1,7 @@
 cabal-version: >=1.10
 Name: hsc2hs
 Version: 0.68.10
-x-revision: 3
+x-revision: 5
 
 Copyright: 2000, Marcin Kowalczyk
 License: BSD3
@@ -28,10 +28,11 @@ Data-Files: template-hsc.h
 build-type: Simple
 
 tested-with:
-  GHC == 9.12.1
-  GHC == 9.10.1
-  GHC == 9.8.2
-  GHC == 9.6.6
+  GHC == 9.14.1
+  GHC == 9.12.2
+  GHC == 9.10.3
+  GHC == 9.8.4
+  GHC == 9.6.7
   GHC == 9.4.8
   GHC == 9.2.8
   GHC == 9.0.2
@@ -98,7 +99,7 @@ test-suite spec
   other-modules:     ATTParser Flags BDD
   ghc-options:       -Wall -threaded
   type:              exitcode-stdio-1.0
-  build-depends:     base                 >= 4.3.0   && < 4.22,
+  build-depends:     base                 >= 4.3.0   && < 4.23,
                      tasty                >= 1.5     && < 1.6,
                      tasty-hunit          >= 0.10    && < 0.11
 
