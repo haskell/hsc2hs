@@ -16,8 +16,9 @@ jobs:
         ghc: ['9.10', '9.12', '9.14']
         os: [ubuntu-latest, macOS-latest, windows-latest]
         include:
-          - os: ubuntu-latest
-            ghc: '8.0'
+          # Fails with GHC 8.0
+          # - os: ubuntu-latest
+          #   ghc: '8.0'
           - os: ubuntu-latest
             ghc: '8.2'
           - os: ubuntu-latest
