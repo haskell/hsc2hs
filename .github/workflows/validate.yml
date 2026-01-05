@@ -11,6 +11,7 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         ghc: ['9.10', '9.12', '9.14']
         os: [ubuntu-latest, macOS-latest, windows-latest]
@@ -49,4 +50,5 @@ jobs:
       - run: cabal check
       - run: cabal update
       - run: cabal build
+      - run: cabal build --enable-tests
       - run: cabal test --test-show-details=direct --verbose
