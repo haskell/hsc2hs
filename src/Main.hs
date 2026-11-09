@@ -104,6 +104,10 @@ bye s = putStr s >> exitWith ExitSuccess
 
 processFiles :: ConfigM Maybe -> [FilePath] -> String -> IO ()
 processFiles configM files usage = do
+    case (cViaNode configM, cViaAsm configM) of
+        (Just "", _) -> die "--via-node requires a non-empty Node.js executable\n"
+        (Just _, True) -> die "--via-node cannot be combined with --via-asm\n"
+        _ -> return ()
     mb_libdir <- getLibDir
 
     (template, extraFlags) <- findTemplate usage mb_libdir configM
@@ -119,13 +123,15 @@ processFiles configM files usage = do
                      cNoCompile    = cNoCompile configM,
                      cCrossCompile = cCrossCompile configM,
                      cViaAsm       = cViaAsm configM,
+                     cViaNode      = cViaNode configM,
                      cCrossSafe    = cCrossSafe configM,
                      cColumn       = cColumn configM,
                      cVerbose      = cVerbose configM,
                      cFlags        = cFlags configM ++ extraFlags
                  }
 
-    let outputter = if cCrossCompile config then outputCross else outputDirect
+    let outputter = if cCrossCompile config && cViaNode config == Nothing
+                    then outputCross else outputDirect
 
     forM_ files (\name -> do
         (outName, outDir, outBase) <- case [f | Output f <- cFlags config] of

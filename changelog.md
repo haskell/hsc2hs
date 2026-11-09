@@ -1,3 +1,8 @@
+## Unreleased
+
+ - Add opt-in `--via-node=PROG` for batched cross-target constant extraction
+   using Emscripten and Node.js, including when `-x` is supplied.
+
 ## 0.68.10
 
  - Further improve robustness of detection of pointer types in `--cross` mode.

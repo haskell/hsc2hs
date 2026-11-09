@@ -72,6 +72,11 @@ behavior:
 ``-x``, ``--cross-compile``
     Activate cross-compilation mode (see `cross-compilation`_).
 
+``--via-node=PROG``
+    Compile the generated C program with Emscripten and run it using the
+    specified Node.js executable. This selects batched execution even when
+    ``--cross-compile`` is present. See `cross-compilation`_.
+
 ``--cross-safe``
     Restrict the .hsc directives to those supported by the
     ``--cross-compile`` mode (see `cross-compilation`_). This should be
@@ -241,13 +246,65 @@ host machine. For this situation, there's a special mode
 information from compilations only — specifically, whether or not
 compilation fails.
 
-Only a subset of ``.hsc`` syntax is supported by ``--cross-compile``.
+Only a subset of ``.hsc`` syntax is supported by compiler-probe cross-compilation.
 The following are unsupported:
 
 -  ``#{const_str}``
 -  ``#{let}``
 -  ``#{def}``
 -  Custom constructs
+
+Running JavaScript target programs with Node.js
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When the target C compiler is Emscripten, Node.js can execute the generated
+program on the build machine. Use ``--via-node=PROG`` to obtain all constants,
+structure layouts, and type information from one execution per input file,
+instead of sequential compiler-error probes::
+
+    hsc2hs -x --cc=emcc --ld=emcc --via-node=node Input.hsc
+
+The program is compiled for the **target ABI**, not the host ABI. Retain all
+of your target include paths, definitions, compiler flags, and linker flags;
+required target libraries must also be available to Emscripten. This mode
+requires an Emscripten compiler/linker and a compatible Node.js installation.
+It does not enable running arbitrary cross-target executables in Node.js.
+
+``PROG`` is a single executable name or path, not a shell command. For extra
+Node options, use an executable wrapper. No shell or compiler response file
+is used to pass the generated program to Node.js.
+
+This mode reuses the normal generator: one main-object compilation, one
+utility-object compilation, one link, and one Node.js execution per input
+file. It supports the normal directives (including ``#const_str``, ``#let``,
+and ``#def``). An explicit ``--cross-safe`` still restricts directives.
+``--via-node`` takes precedence over ``-x`` irrespective of option order,
+so existing cross-toolchain wrappers may keep supplying ``-x``. Combining
+it with ``--via-asm`` is an error. Without ``--via-node``, existing native
+and compiler-probe behavior is unchanged; runtime errors never silently
+fall back to compiler probing.
+
+The linker is given ``--oformat=js -sENVIRONMENT=node -sSINGLE_FILE=1
+-sEXIT_RUNTIME=1 -sNODERAWFS=1 -sFORCE_FILESYSTEM=1`` and writes a self-contained ``*_hsc_make.cjs``. The
+``.cjs`` suffix permits execution inside packages with ``"type": "module"``.
+Raw Node.js file I/O preserves stdout bytes (including an unterminated final
+line); the program has access to the build machine's filesystem. As with
+native hsc2hs, only run trusted input and C headers. Constants are formatted
+by the target C program, so 64-bit integers are
+never converted through JavaScript's floating-point ``Number`` type.
+Use ordinary executable output settings: browser-only, ES-module,
+modularized/library-only, pthread, separate-debug-file and preload options
+are not supported for this helper. Additional linker outputs requested by
+user flags are not tracked for cleanup.
+
+``--keep-files`` retains the generated program and intermediate files;
+otherwise they are removed, including the program if Node.js fails.
+``--no-compile`` only writes the intermediate C source and invokes neither
+compiler nor Node.js.
+
+An optional POSIX integration test requires Python 3, Emscripten, and Node.js::
+
+    python3 test/via-node.py /path/to/hsc2hs /path/to/emcc /path/to/node
 
 .. |Hackage| image:: https://img.shields.io/hackage/v/hsc2hs.svg
     :target: http://hackage.haskell.org/package/hsc2hs

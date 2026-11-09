@@ -20,6 +20,7 @@ data ConfigM m = Config {
                      cNoCompile :: Bool,
                      cCrossCompile :: Bool,
                      cViaAsm :: Bool,
+                     cViaNode :: Maybe FilePath,
                      cCrossSafe :: Bool,
                      cColumn :: Bool,
                      cVerbose :: Bool,
@@ -44,6 +45,7 @@ emptyMode = UseConfig $ Config {
                             cNoCompile    = False,
                             cCrossCompile = False,
                             cViaAsm       = False,
+                            cViaNode      = Nothing,
                             cCrossSafe    = False,
                             cColumn       = False,
                             cVerbose      = False,
@@ -84,6 +86,8 @@ options = [
         "activate cross-compilation mode",
     Option [] ["via-asm"] (NoArg (withConfig $ setViaAsm True))
         "use a crude asm parser to compute constants when cross compiling",
+    Option [] ["via-node"] (ReqArg (withConfig . setViaNode) "PROG")
+        "run the generated Emscripten program with Node.js instead of cross probes",
     Option [] ["cross-safe"] (NoArg (withConfig $ setCrossSafe True))
         "restrict .hsc directives to those supported by --cross-compile",
     Option ['k'] ["keep-files"] (NoArg (withConfig $ setKeepFiles True))
@@ -131,6 +135,9 @@ setCrossCompile b c = c { cCrossCompile = b }
 
 setViaAsm :: Bool -> ConfigM Maybe -> ConfigM Maybe
 setViaAsm b c = c { cViaAsm = b }
+
+setViaNode :: FilePath -> ConfigM Maybe -> ConfigM Maybe
+setViaNode fp c = c { cViaNode = Just fp }
 
 setCrossSafe :: Bool -> ConfigM Maybe -> ConfigM Maybe
 setCrossSafe b c = c { cCrossSafe = b }

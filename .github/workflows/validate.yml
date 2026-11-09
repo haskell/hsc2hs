@@ -30,3 +30,20 @@ jobs:
       - run: cabal update
       - run: cabal build
       - run: cabal test --test-show-details=direct --verbose
+  via-node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: haskell-actions/setup@v2
+        with:
+          ghc-version: '9.10.1'
+          cabal-version: '3.14.1.1'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: '6.0.9'
+      - run: cabal update
+      - run: cabal build exe:hsc2hs
+      - run: python3 test/via-node.py "$(cabal list-bin exe:hsc2hs)" "$(command -v emcc)" "$(command -v node)"
