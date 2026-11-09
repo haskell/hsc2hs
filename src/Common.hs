@@ -89,6 +89,29 @@ rawSystemWithStdOutL outDir outBase action flg prog args outFile = withResponseF
                       ++ "error: "        ++ errdata ++ "\n"
     _                    -> return ()
 
+-- Runners such as Node.js do not understand GCC response files. Pass their
+-- arguments directly, without involving a shell (including paths with spaces).
+rawSystemWithStdOutArgs :: String -> Bool -> FilePath -> [String] -> FilePath -> IO ()
+rawSystemWithStdOutArgs action verbose prog args outFile = do
+  let cmdLine = unwords (map show (prog : args))
+  when verbose $ hPutStrLn stderr ("Executing: " ++ cmdLine ++ " >" ++ show outFile)
+  withBinaryFile outFile WriteMode $ \hOut -> do
+    (_, _, progerr, ph) <- createProcess (proc prog args)
+      { std_out = UseHandle hOut, std_err = CreatePipe
+#if MIN_VERSION_process(1,5,0)
+      , use_process_jobs = True
+#endif
+      }
+    errdata <- maybeReadHandle progerr
+    exitStatus <- waitForProcess ph
+    case exitStatus of
+      ExitFailure exitCode ->
+        die $ action ++ " failed (exit code " ++ show exitCode ++ ")\n"
+            ++ "output file: " ++ show outFile ++ "\n"
+            ++ "command was: " ++ cmdLine ++ "\n"
+            ++ "error: " ++ errdata ++ "\n"
+      ExitSuccess -> return ()
+
 maybeReadHandle :: Maybe Handle -> IO String
 maybeReadHandle Nothing  = return "<no data>"
 maybeReadHandle (Just h) = do

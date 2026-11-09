@@ -32,12 +32,15 @@ outputDirect config outName outDir outBase name toks = do
         enableCol    = cColumn config
         cProgName    = outDir++outBase++"_hsc_make.c"
         oProgName    = outDir++outBase++"_hsc_make.o"
-        progName     = outDir++outBase++"_hsc_make"
+        nodeMode     = cViaNode config /= Nothing
+        progName     = outDir++outBase++"_hsc_make" ++
+                       if nodeMode then ".cjs" else
 #if defined(mingw32_HOST_OS) || defined(__CYGWIN32__)
--- This is a real hack, but the quoting mechanism used for calling the C preprocesseor
--- via GHC has changed a few times, so this seems to be the only way...  :-P * * *
-                          ++ ".exe"
+                           ".exe"
+#else
+                           ""
 #endif
+
         outHFile     = outBase++"_hsc.h"
         outHName     = outDir++outHFile
         outCName     = outDir++outBase++"_hsc.c"
@@ -93,26 +96,36 @@ outputDirect config outName outDir outBase name toks = do
         (  [oProgName, oUtilsName]
         ++ ["-o", progName]
         ++ [f | LinkFlag f <- flags]
+        -- Self-contained CommonJS; raw filesystem I/O preserves stdout bytes
+        -- rather than Emscripten's default line-oriented console output.
+        ++ if nodeMode
+           then [ "--oformat=js", "-sENVIRONMENT=node", "-sSINGLE_FILE=1"
+                , "-sEXIT_RUNTIME=1", "-sNODERAWFS=1", "-sFORCE_FILESYSTEM=1" ]
+           else []
         )
-      possiblyRemove oProgName $ do
-
-        rawSystemWithStdOutL outDir outBase ("running " ++ execProgName) beVerbose execProgName [] outName
+      possiblyRemove oProgName $
         possiblyRemove progName $ do
 
+          case cViaNode config of
+            Nothing -> rawSystemWithStdOutL outDir outBase ("running " ++ execProgName)
+                         beVerbose execProgName [] outName
+            Just node -> rawSystemWithStdOutArgs ("running " ++ execProgName ++ " with " ++ node)
+                           beVerbose node [execProgName] outName
+
           when needsH $ writeBinaryFile outHName $
-            "#ifndef "++includeGuard++"\n" ++
-            "#define "++includeGuard++"\n" ++
-            "#include <HsFFI.h>\n" ++
-            "#if __NHC__\n" ++
-            "#undef HsChar\n" ++
-            "#define HsChar int\n" ++
-            "#endif\n" ++
-            concatMap outFlagH flags++
-            concatMap outTokenH specials++
-            "#endif\n"
+              "#ifndef "++includeGuard++"\n" ++
+              "#define "++includeGuard++"\n" ++
+              "#include <HsFFI.h>\n" ++
+              "#if __NHC__\n" ++
+              "#undef HsChar\n" ++
+              "#define HsChar int\n" ++
+              "#endif\n" ++
+              concatMap outFlagH flags++
+              concatMap outTokenH specials++
+              "#endif\n"
 
           when needsC $ writeBinaryFile outCName $
-            "#include \""++outHFile++"\"\n"++
-            concatMap outTokenC specials
-            -- NB. outHFile not outHName; works better when processed
-            -- by gcc or mkdependC.
+              "#include \""++outHFile++"\"\n"++
+              concatMap outTokenC specials
+              -- NB. outHFile not outHName; works better when processed
+              -- by gcc or mkdependC.

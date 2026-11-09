@@ -81,6 +81,17 @@ main = specMain $ do
       files `shouldBe` []
       errs `shouldBe` []
 
+    it "defaults to no Node runner" $ do
+      configMode emptyMode cViaNode `shouldBe` Just Nothing
+
+    it "uses the last Node runner without splitting paths" $ do
+      let (fs, _, errs) = getOpt Permute options
+            ["--via-node=node", "-x", "--via-node=/path with spaces/node"]
+          mode = foldl (\m f -> f m) emptyMode fs
+      configMode mode cViaNode `shouldBe` Just (Just "/path with spaces/node")
+      configMode mode cCrossCompile `shouldBe` Just True
+      errs `shouldBe` []
+
 configMode :: Mode -> (ConfigM Maybe -> a) -> Maybe a
 configMode (UseConfig c) f = Just (f c)
 configMode _             _ = Nothing

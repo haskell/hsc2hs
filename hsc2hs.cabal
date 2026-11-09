@@ -44,6 +44,8 @@ tested-with:
 
 extra-source-files:
   changelog.md
+  README.rst
+  test/via-node.py
   test/asm/*.s
 
 flag in-ghc-tree
