@@ -26,6 +26,7 @@ data Inst = Ident String
           | Quad Word64
           | Ref String
           | Ascii String
+          | SectionChange
           deriving Show
 
 mkLong :: Word32 -> Inst
@@ -46,6 +47,12 @@ type ASM = [(String, Inst)]
 isIdent :: Inst -> Bool
 isIdent (Ident _) = True
 isIdent _ = False
+
+-- | Directives that switch the section the assembler writes to. A label's
+-- value lives in one section, so such a directive ends the value the way a
+-- new label does.
+sectionDirectives :: [String]
+sectionDirectives = [".section", ".pushsection", ".popsection"]
 
 trim :: String -> String
 trim = reverse . dropWhile (`elem` " \t") . reverse . dropWhile (`elem` " \t")
@@ -90,34 +97,67 @@ preprocess ('\t':attr) = let (h, t) = break isSpace attr
                          (".skip":x:_) | (w x) == "4"   -> [mkLong 0]
                                        | (w x) == "8"   -> [mkQuad 0]
 
-                         (".ascii":x:_)             -> [mkAscii $ read x]
-                         (".asciz":x:_)             -> [mkAscii $ read x ++ "\0"]
+                         (".ascii":x:_)             -> mkAsciiSafe x False
+                         (".asciz":x:_)             -> mkAsciiSafe x True
                          -- found on nios, sh4, alpha, mk68k; all without \0.
-                         (".string":x:_)            -> [mkAscii $ read x ++ "\0"]
+                         (".string":x:_)            -> mkAsciiSafe x True
                          -- found on hppa
-                         (".stringz":x:_)           -> [mkAscii $ read x ++ "\0"]
+                         (".stringz":x:_)           -> mkAsciiSafe x True
                          -- ia64
-                         ("stringz":x:_)            -> [mkAscii $ read x ++ "\0"]
+                         ("stringz":x:_)            -> mkAsciiSafe x True
+                         -- a switch to another section: end the value in
+                         -- progress (see 'parseInsts')
+                         (d:_) | d `elem` sectionDirectives -> [SectionChange]
                          _                          -> []
   where
+    -- Read a C string literal. Metadata sections carry strings that are not
+    -- plain Haskell-readable literals (a CodeView record names the source
+    -- file, backslashes and all), so a string that will not parse is skipped
+    -- instead of crashing the parse.
+    mkAsciiSafe x nul = case reads x of
+      [(s, "")] -> [mkAscii (if nul then s ++ "\0" else s)]
+      _         -> []
     w x = case words x of
       []     -> error $ "preprocess: expected some non-space characters, "
                      ++ "but got spaces only in '" ++ x ++ "'"
       hd : _ -> hd
-preprocess ('.':'z':'e':'r':'o':'f':'i':'l':'l':' ':x) = case words' (==',') x of
+preprocess ('.':z:'e':'r':'o':'f':'i':'l':'l':' ':x) = case words' (==',') x of
       (_seg:_sect:sym:size:_) | size == "4" -> [Ident sym, mkLong 0]
                               | size == "8" -> [Ident sym, mkQuad 0]
       _ -> []
+preprocess ('.':rest) = case words ('.':rest) of
+    -- the same section switches, not indented
+    (d:_) | d `elem` sectionDirectives -> [SectionChange]
+    -- every other directive at the start of a line is a boundary, like a label
+    _ -> [Ident $ takeWhile (/= ':') ('.':rest)]
 preprocess (c:cs) | not (isSpace c) = [Ident $ takeWhile (/= ':') (c:cs)]
                   | otherwise       = []
 
 -- | turn the list of instructions into an associated list
+--
+-- A label's value is the constant instructions between the label and the next
+-- label. A 'SectionChange' ends that value just like a label does: whatever
+-- follows belongs to the new section, which for the parser's purposes is the
+-- assembler's debug or metadata output, not a constant. In particular, a
+-- section switched to directly after a value (clang's CodeView @.debug$S@
+-- records, emitted even at @-g0@) must not be read as a continuation of the
+-- value before it, and the instructions before the next label in the new
+-- section belong to no label at all.
 parseInsts :: [Inst] -> [(String, Inst)]
-parseInsts [] = []
-parseInsts (Ident name:xs) = case break isIdent xs of
-  ([], xs') -> parseInsts xs'
-  (is, xs') -> (name, combineInst is):parseInsts xs'
-parseInsts _ = error "Invalid instructions"
+parseInsts = go Nothing []
+  where
+    go (Just name) is [] | null is   = []
+                         | otherwise = [(name, combineInst is)]
+    go _ _ [] = []
+    go (Just name) is (SectionChange:xs)
+      | null is   = go Nothing [] xs
+      | otherwise = (name, combineInst is) : go Nothing [] xs
+    go Nothing _ (SectionChange:xs) = go Nothing [] xs
+    go (Just name) [] (Ident next:xs) = go (Just next) [] xs
+    go (Just name) is (Ident next:xs) =
+        (name, combineInst is) : go (Just next) [] xs
+    go Nothing _ (Ident next:xs) = go (Just next) [] xs
+    go cur is (i:xs) = go cur (is ++ [i]) xs
 
 -- | combine instructions (e.g. two long into a quad)
 combineInst :: [Inst] -> Inst
