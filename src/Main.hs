@@ -13,7 +13,7 @@ import Control.Monad            ( liftM, forM_ )
 import Data.List                ( isSuffixOf )
 import System.Console.GetOpt
 
--- If we ware building the hsc2hs
+-- If we were building the hsc2hs
 -- binary for binary distribution
 -- in the GHC tree.  Obtain
 -- the path to the @$topdir/lib@
